@@ -12,6 +12,16 @@ ui <- fluidPage(
       # within this panel, create another panel containing three inputs
       sidebarPanel(
         
+        # select test using buttons (not reactive, user has to click calculate again to update test)
+        radioButtons(
+          inputId = "alternative", 
+          label = "Select the type of test:",
+          choices = c("Two-sided" = "two.sided", 
+                      "Left-sided"  = "less", 
+                      "Right-sided" = "greater"),
+          selected = "two.sided" # default selection
+        ),
+        
         # each input given default values
         numericInput("p",      "Hypothesized Proportion", 0.5),
         
@@ -19,20 +29,14 @@ ui <- fluidPage(
         
         numericInput("p_hat",  "Observed Proportion",  0.6),
         
-        # output hidden until the "Calculate" button is pushed
-        actionButton("button_pushed", "Calculate")
       ),
       
       # output
       mainPanel(
+          
+          plotOutput("plot"),
+          gt_output("testTable")
         
-        # only show the results if button_pushed was clicked at least once
-        conditionalPanel(
-          
-          condition = "input.button_pushed > 0",  
-          
-          # print R output
-          verbatimTextOutput("test_result")
         )
       )
     ),
@@ -41,4 +45,4 @@ ui <- fluidPage(
     tabPanel("Two Proportion Test")
     
   )
-)
+
