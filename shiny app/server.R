@@ -20,7 +20,7 @@ server <- function(input, output, session) {
     prop.test(x, n, p = p0, alternative = input$alternative)
   })
   
-  output$testTable <- render_gt({
+  output$test_table <- render_gt({
     
     # get test results from calculations
     test_res <- calc_results()  
@@ -67,16 +67,17 @@ server <- function(input, output, session) {
     x_obs <- round(input$p_hat * input$n)
     binom_probs <- dbinom(x_vals, size = input$n, prob = input$p) 
     
-    # initialize all bars to a "default" color (go bruins!!)
-    bar_colors <- rep("lightskyblue", length(x_vals))
+    # fun fact: #2774AE is the official UCLA Blue color 
+    bar_colors <- rep("#2774AE", length(x_vals))
     
     if (input$alternative == "less") {
       # highlight all x <= x_obs
-      bar_colors[which(x_vals <= x_obs)] <- "darkgoldenrod1"
+      # another fun fact: #FFD100 is the official UCLA Gold color
+      bar_colors[which(x_vals <= x_obs)] <- "#FFD100"
       
     } else if (input$alternative == "greater") {
       # highlight all x >= x_obs
-      bar_colors[which(x_vals >= x_obs)] <- "darkgoldenrod1"
+      bar_colors[which(x_vals >= x_obs)] <- "#FFD100"
       
     } else { # two.sided
       mu <- input$n * input$p
@@ -84,7 +85,7 @@ server <- function(input, output, session) {
       x_lower <- floor(mu - dist_from_mean)
       x_upper <- ceiling(mu + dist_from_mean)
       index <- which(x_vals <= x_lower | x_vals >= x_upper)
-      bar_colors[index] <- "darkgoldenrod1"
+      bar_colors[index] <- "#FFD100"
     }
     
     # create barplot
