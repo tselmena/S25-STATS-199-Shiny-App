@@ -3,7 +3,7 @@
 ui <- fluidPage(
   
   # title
-  titlePanel("UCLA Intro Stats Calculator"),
+  titlePanel("UCLA Introductory Statistics Calculator"),
   
   tabsetPanel(
     # create a tab for a two-sided one proportion test
