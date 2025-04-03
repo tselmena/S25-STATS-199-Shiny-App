@@ -1,7 +1,7 @@
 # ui.R =========================================================================
 
 ui <- fluidPage(
-  
+  # hi it's hayley
   # title
   titlePanel("UCLA Intro Stats Calculator"),
   
