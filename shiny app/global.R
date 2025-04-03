@@ -5,6 +5,7 @@
 
 library(shiny)
 library(gt)
+library(bslib)
 source("ui.R", local = TRUE)
 source("server.R")
 
