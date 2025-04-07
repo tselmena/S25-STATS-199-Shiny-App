@@ -1,7 +1,7 @@
 # ui.R =========================================================================
 
 ui <- fluidPage(
-  # hi it's hayley
+
   # title
   titlePanel("UCLA Intro Stats Calculator"),
   
@@ -27,7 +27,7 @@ ui <- fluidPage(
         
         numericInput("n",      "Sample Size",              30),
         
-        numericInput("p_hat",  "Observed Proportion",  0.6),
+        numericInput("p_hat",  "Observed Proportion",  0.6)
         
       ),
       
@@ -38,11 +38,37 @@ ui <- fluidPage(
           gt_output("test_table")
         
         )
+      ),
+    
+    # tab 3: one mean test
+    tabPanel("One-Sample T-Test",
+      sidebarPanel(
+        
+        # select test using buttons (not reactive, user has to click calculate again to update test)
+        radioButtons(
+          inputId = "mean_alt",
+          label = "Select the type of test:",
+          choices = c("Two-sided" = "two.sided",
+                      "Left-sided" = "less",
+                      "Right-sided" = "greater"),
+          selected = "two.sided" # default
+        ),
+        
+        # each input given default values
+        numericInput("mu", "Hypothesized Mean", 100),
+        numericInput("n", "Sample Size", 25),
+        numericInput("x_bar", "Sample Mean", 98),
+        numericInput("s", "Sample Standard Deviation",  6)
+      ),
+      
+      # output
+      mainPanel(
+        
+        plotOutput("one_mean_plot"),
+        gt_output("one_mean_test_table")
+        
+        )
       )
-    ),
-    
-    # add more tabs here, ex:
-    tabPanel("Two Proportion Test")
-    
   )
+)
 
