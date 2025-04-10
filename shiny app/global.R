@@ -6,6 +6,7 @@
 library(shiny)
 library(gt)
 library(bslib)
+library(shinythemes)
 source("ui.R", local = TRUE)
 source("server.R")
 
