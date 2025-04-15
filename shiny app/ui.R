@@ -1,4 +1,3 @@
-
 # ui.R =========================================================================
 
 ui <- fluidPage(
@@ -11,58 +10,72 @@ ui <- fluidPage(
   
   tabsetPanel(
     # ======================================================================
-    # TAB 1: One Proportion Test
+    # TAB 1: One Proportion (ui.R snippet)
     # ======================================================================
-    tabPanel("One Proportion", sidebarLayout(
-      sidebarPanel(
-        # allow users to check confidence interval and/or test results
-        checkboxInput("show_ci", "Confidence Interval", TRUE),
-        radioButtons(
-          inputId = "alternative",
-          label = "Select the type of test:",
-          choices = c(
-            "Two-sided" = "two.sided",
-            "Left-tailed"  = "less",
-            "Right-tailed" = "greater"
-          ),
-          selected = "two.sided" # default selection
-        ),
-        # each input given default values
-        numericInput("p", "Hypothesized Proportion", 0.5),
-        numericInput("n", "Sample Size", 30),
-        numericInput("p_hat", "Sample Proportion", 0.6),
-      ),
-      
-      # output
-      mainPanel(
-        # fluidRow(
-        #   column(width = 6, plotOutput("plot")),
-        #   column(width = 6, gt_output("test_table"), gt_output("conclusions")),
-        # ),
-        # fluidRow(
-        #   column(width = 12, gt_output("ci_table"),textOutput("ci_conclusion"))
-        # )
-        plotOutput("plot"),
-        #gt_output("test_table"),
-        #gt_output("conclusions"),
-        #gt_output("ci_table"),
-        textOutput("ci_conclusion"),
-        tags$head(
-          tags$style(
-            "#ci_conclusion{color: #2774AE;
-                                 font-size: 20px;
-                                 font-style: bold;
-                                 }"
-          )
-        ),
-        # Inside mainPanel (or anywhere you like)
-        #gt_output("spanner_table")
-        gt_output("combined_table"),
+    tabPanel("One Proportion",
+             sidebarLayout(
+               sidebarPanel(
+                 # checkbox for CI
+                 checkboxInput("show_ci", "Confidence Interval", FALSE),
+                 
+                 # If CI is shown, let the user select the confidence level
+                 conditionalPanel(
+                   condition = "input.show_ci == true",
+                   selectInput(
+                     inputId = "conf_level",
+                     label = "Confidence Level:",
+                     choices = c("90%" = 0.90, "95%" = 0.95, "99%" = 0.99),
+                     selected = 0.95
+                   )
+                 ),
+                 # checkbox to turn the entire test on/off
+                 checkboxInput("show_test", "Test", TRUE),
+                 
+                 # only show the test-type radio buttons if "Test" is checked
+                 conditionalPanel(
+                   condition = "input.show_test == true",
+                   radioButtons(
+                     inputId = "alternative",
+                     label = "Select the type of test:",
+                     choices = c("Two-sided" = "two.sided",
+                                 "Left-tailed" = "less",
+                                 "Right-tailed"= "greater"),
+                     selected = "two.sided"
+                   )
+                 ),
+                 
+                 # Mumeric inputs for the test
+                 numericInput("p", "Hypothesized Proportion", 0.5),
+                 numericInput("n", "Sample Size", 30),
+                 numericInput("p_hat", "Sample Proportion", 0.6)
+               ),
+               
+               mainPanel(
+                 # main plot (always on)
+                 plotOutput("plot"),
+                 # confidence interval text
+                 textOutput("ci_label"),
+                 tags$head(
+                   tags$style("#ci_label {color: ##000000; font-size: 25px; font-style: bold;}")
+                 ),
+                 textOutput("ci_conclusion"),
+                 # this is just to change color / make font larger
+                 tags$head(
+                   tags$style("#ci_conclusion {color: #2774AE; font-size: 20px; font-style: bold;}")
+                 ),
         
-        #h3("ci_conclusion")
-        
-      )
-    )),
+                 # if "Test" is checked, show results and conclusions
+                 conditionalPanel(
+                   condition = "input.show_test == true",
+                   gt_output("results_table"),
+                   gt_output("conclusions")
+                 ),
+                 
+                 # table for CI (rendered by show_ci)
+                 #gt_output("ci_table")
+               )
+             )
+    ),
     
     # ======================================================================
     # TAB 2: One Mean
