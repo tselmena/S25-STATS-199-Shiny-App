@@ -7,6 +7,7 @@ library(shiny)
 library(gt)
 library(bslib)
 library(shinythemes)
+library(ggplot2)
 source("ui.R", local = TRUE)
 source("server.R")
 
