@@ -152,31 +152,30 @@ ui <- fluidPage(
     tabPanel(
       "Normal Distribution",
       sidebarLayout(
-        # within this panel, create another panel containing three inputs
         sidebarPanel(
-          numericInput("mean", "Mean", 0),
+          numericInput("mean", "Mean", value = 0),
+          numericInput("sd", "Standard Deviation", value = 1, min = 0.001),
           
-          numericInput("sd", "Standard Deviation", 1),
-          
-          # select test using buttons (not reactive, user has to click calculate again to update test)
           radioButtons(
             inputId = "range",
             label = "Select the range:",
             choices = c(
               "Above" = "above",
-              "Below"  = "below",
+              "Below" = "below",
               "Between" = "between",
               "Outside" = "outside"
             ),
-            selected = "above" # default selection
+            selected = "above"
           ),
           
-          uiOutput("dynamic_inputs")
-          
-          # output
-          
+          # Dynamic UI for threshold and probability input
+          uiOutput("dynamic_inputs"),
+          numericInput("prob_input", "Probability", value = 0.025, min = 0, max = 1, step = 0.001)
         ),
-        mainPanel(textOutput("norm_prob"), plotOutput("norm_plot"))
+        mainPanel(
+          textOutput("norm_prob"),
+          plotOutput("norm_plot")
+        )
       )
     ),
     

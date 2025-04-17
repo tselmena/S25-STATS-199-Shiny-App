@@ -316,29 +316,38 @@ server <- function(input, output, session) {
   # TAB 5: Normal Distribution
   # ======================================================================
   
+  # Normal distribution reactive calculation
   norm_result <- reactive({
-    # Validate standard deviation
-    if (input$sd <= 0) {
-      return(list(error = "Standard deviation must be positive."))
+    req(input$mean, input$sd, input$range)
+    
+    # Validate and coerce inputs
+    if (!is.numeric(input$sd) || input$sd <= 0) {
+      return(list(error = "Standard deviation must be a positive number."))
     }
     
-    mean <- input$mean
-    sd <- input$sd
+    mean <- as.numeric(input$mean)
+    sd <- as.numeric(input$sd)
     range_type <- input$range
-    num1 <- input$num1
-    num2 <- input$num2
+    prob_input <- as.numeric(input$prob_input)
     
-    # Full normal curve
+    num1 <- if (!is.null(input$num1)) as.numeric(input$num1) else NA
+    num2 <- if (!is.null(input$num2)) as.numeric(input$num2) else NA
+    
+    # Handle NULL or invalid inputs gracefully
+    if (is.na(num1)) num1 <- mean + sd
+    if ((range_type %in% c("between", "outside")) && is.na(num2)) {
+      num2 <- mean + 2 * sd
+    }
+    
+    # Base normal distribution curve
     x_vals <- seq(mean - 4 * sd, mean + 4 * sd, length.out = 1000)
     y_vals <- dnorm(x_vals, mean, sd)
     df <- data.frame(x = x_vals, y = y_vals)
     
-    # Initialize
     prob <- NA
     error_msg <- NULL
     shade_df <- data.frame(x = numeric(0), y = numeric(0))
     
-    # Handle range cases
     if (range_type == "above") {
       prob <- pnorm(num1, mean, sd, lower.tail = FALSE)
       shade_df <- df[df$x >= num1, ]
@@ -348,22 +357,19 @@ server <- function(input, output, session) {
       shade_df <- df[df$x <= num1, ]
       
     } else if (range_type == "between") {
-      if (is.null(num2) || num2 < num1) {
-        error_msg <- "Please ensure Value 2 is greater than Value 1 for 'Between'."
+      if (num2 < num1) {
+        error_msg <- "Lower threshold must be less than upper threshold for 'Between'."
       } else {
         prob <- pnorm(num2, mean, sd) - pnorm(num1, mean, sd)
         shade_df <- df[df$x >= num1 & df$x <= num2, ]
       }
       
     } else if (range_type == "outside") {
-      if (is.null(num2) || num2 < num1) {
-        error_msg <- "Please ensure Value 2 is greater than Value 1 for 'Outside'."
+      if (num2 < num1) {
+        error_msg <- "Lower threshold must be less than upper threshold for 'Outside'."
       } else {
         prob <- 1 - (pnorm(num2, mean, sd) - pnorm(num1, mean, sd))
-        shade_df <- rbind(
-          df[df$x <= num1, ],
-          df[df$x >= num2, ]
-        )
+        shade_df <- rbind(df[df$x <= num1, ], df[df$x >= num2, ])
       }
     }
     
@@ -374,53 +380,78 @@ server <- function(input, output, session) {
     list(prob = prob, data = df, shaded = shade_df)
   })
   
+  # Dynamic label and input rendering
+  output$dynamic_inputs <- renderUI({
+    if (input$range %in% c("between", "outside")) {
+      tagList(
+        numericInput("num1", "Lower Threshold", value = -1.96),
+        numericInput("num2", "Upper Threshold", value = 1.96)
+      )
+    } else {
+      numericInput("num1", "Threshold", value = 1.96)
+    }
+  })
+  
+  # Textual probability output
   output$norm_prob <- renderText({
     res <- norm_result()
     if (!is.null(res$error)) return(res$error)
     paste0("Probability = ", round(res$prob, 4))
   })
   
+  # Plot output
   output$norm_plot <- renderPlot({
     res <- norm_result()
     if (!is.null(res$error)) return(NULL)
     
     base_plot <- ggplot(res$data, aes(x, y)) +
       geom_line(color = "blue") +
-      labs(
-        title = "Normal Distribution",
-        x = "X", y = "Density"
-      ) +
+      labs(title = "Normal Distribution", x = "X", y = "Density") +
       theme_minimal()
     
     if (input$range == "outside") {
-      # For 'outside', plot two separate shaded areas
       shade_left  <- subset(res$data, x <= input$num1)
       shade_right <- subset(res$data, x >= input$num2)
-      
       base_plot +
         geom_area(data = shade_left, aes(x, y), fill = "lightblue", alpha = 0.5) +
         geom_area(data = shade_right, aes(x, y), fill = "lightblue", alpha = 0.5)
-      
     } else {
-      # For all other cases
       base_plot +
         geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
     }
   })
   
-  output$dynamic_inputs <- renderUI({
-    if (input$range %in% c("between", "outside")) {
-      tagList(
-        numericInput("num1", "Value 1", value = -1.96),
-        numericInput("num2", "Value 2", value = 1.96)
-      )
-    } else {
-      numericInput("num1", "Value 1", value = 1.96)
-    }
+  # Observer to update thresholds based on probability input
+  observe({
+    req(input$prob_input, input$mean, input$sd, input$range)
+    prob <- as.numeric(input$prob_input)
+    mean <- as.numeric(input$mean)
+    sd <- as.numeric(input$sd)
+    
+    isolate({
+      if (input$range == "below") {
+        threshold <- qnorm(prob, mean, sd)
+        updateNumericInput(session, "num1", value = threshold)
+      } else if (input$range == "above") {
+        threshold <- qnorm(1 - prob, mean, sd)
+        updateNumericInput(session, "num1", value = threshold)
+      } else if (input$range == "between") {
+        tail_prob <- (1 - prob) / 2
+        lower <- qnorm(tail_prob, mean, sd)
+        upper <- qnorm(1 - tail_prob, mean, sd)
+        updateNumericInput(session, "num1", value = lower)
+        updateNumericInput(session, "num2", value = upper)
+      } else if (input$range == "outside") {
+        central_prob <- 1 - prob
+        lower <- qnorm((1 - central_prob) / 2, mean, sd)
+        upper <- qnorm(1 - (1 - central_prob) / 2, mean, sd)
+        updateNumericInput(session, "num1", value = lower)
+        updateNumericInput(session, "num2", value = upper)
+      }
+    })
   })
-
-
-
+  
+  
   # ======================================================================
   # TAB 6: t-Distribution
   # ======================================================================
