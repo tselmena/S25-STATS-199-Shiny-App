@@ -316,30 +316,119 @@ server <- function(input, output, session) {
   # TAB 5: Normal Distribution
   # ======================================================================
   
-  # Normal distribution reactive calculation
-  norm_result <- reactive({
-    req(input$mean, input$sd, input$range)
-    
-    # Validate and coerce inputs
-    if (!is.numeric(input$sd) || input$sd <= 0) {
-      return(list(error = "Standard deviation must be a positive number."))
+  observe({
+    if (input$mode == "inverse" && input$range %in% c("between", "outside")) {
+      updateCheckboxInput(session, "symmetric", value = TRUE)
     }
+  })
+  
+  output$dynamic_inputs <- renderUI({
+    if (input$mode == "normal") {
+      if (input$range %in% c("between", "outside")) {
+        tagList(
+          numericInput("num1", "Lower Threshold", value = -1.96),
+          numericInput("num2", "Upper Threshold", value = 1.96)
+        )
+      } else {
+        numericInput("num1", "Threshold", value = 1.96)
+      }
+    } else {
+      if (input$range %in% c("above", "below")) {
+        return(NULL)
+      } else if (input$symmetric) {
+        return(NULL)
+      } else {
+        tagList(
+          radioButtons("known_side", "Known Threshold Is:",
+                       choices = c("Lower" = "lower", "Upper" = "upper"),
+                       selected = "lower"),
+          uiOutput("single_input_ui")
+        )
+      }
+    }
+  })
+  
+  output$single_input_ui <- renderUI({
+    if (input$mode == "inverse" && !input$symmetric &&
+        input$range %in% c("between", "outside")) {
+      label <- if (input$known_side == "lower") "Lower Threshold" else "Upper Threshold"
+      numericInput("num1", label, value = 1.0)
+    }
+  })
+  
+  norm_result <- reactive({
+    req(input$mean, input$sd, input$range, input$mode)
     
-    mean <- as.numeric(input$mean)
-    sd <- as.numeric(input$sd)
+    mean <- input$mean
+    sd <- input$sd
     range_type <- input$range
-    prob_input <- as.numeric(input$prob_input)
+    mode <- input$mode
+    prob_input <- if (!is.null(input$prob_input)) as.numeric(input$prob_input) else NA
     
     num1 <- if (!is.null(input$num1)) as.numeric(input$num1) else NA
     num2 <- if (!is.null(input$num2)) as.numeric(input$num2) else NA
     
-    # Handle NULL or invalid inputs gracefully
-    if (is.na(num1)) num1 <- mean + sd
-    if ((range_type %in% c("between", "outside")) && is.na(num2)) {
-      num2 <- mean + 2 * sd
+    if (mode == "inverse") {
+      if (range_type == "below") {
+        num1 <- qnorm(prob_input, mean, sd)
+      } else if (range_type == "above") {
+        num1 <- qnorm(1 - prob_input, mean, sd)
+      } else if (range_type == "between") {
+        if (input$symmetric) {
+          tail_prob <- (1 - prob_input) / 2
+          dist <- qnorm(1 - tail_prob, mean, sd) - mean
+          num1 <- mean - dist
+          num2 <- mean + dist
+        } else {
+          if (input$known_side == "lower" && !is.na(num1)) {
+            p_lower <- pnorm(num1, mean, sd)
+            tail_prob <- prob_input - p_lower
+            if (tail_prob <= 0 || tail_prob >= 1) return(list(error = "Invalid input."))
+            num2 <- qnorm(p_lower + tail_prob, mean, sd)
+          } else if (input$known_side == "upper" && !is.na(num1)) {
+            p_upper <- 1 - pnorm(num1, mean, sd)
+            tail_prob <- prob_input - p_upper
+            if (tail_prob <= 0 || tail_prob >= 1) return(list(error = "Invalid input."))
+            num2 <- num1
+            num1 <- qnorm(tail_prob, mean, sd)
+          }
+        }
+      } else if (range_type == "outside") {
+        if (input$symmetric) {
+          tail_prob <- prob_input / 2
+          num1 <- qnorm(tail_prob, mean, sd)
+          num2 <- qnorm(1 - tail_prob, mean, sd)
+        } else {
+          if (input$known_side == "lower" && !is.na(num1)) {
+            p_lower <- pnorm(num1, mean, sd)
+            target_upper <- prob_input - p_lower
+            if (target_upper <= 0 || target_upper >= 1) return(list(error = "Invalid combination."))
+            
+            num2 <- tryCatch({
+              uniroot(function(x) {
+                pnorm(x, mean, sd, lower.tail = FALSE) - target_upper
+              }, lower = mean, upper = mean + 10 * sd)$root
+            }, error = function(e) return(NA))
+            
+            if (is.na(num2)) return(list(error = "Could not solve for upper threshold."))
+          } else if (input$known_side == "upper" && !is.na(num1)) {
+            p_upper <- 1 - pnorm(num1, mean, sd)
+            target_lower <- prob_input - p_upper
+            if (target_lower <= 0 || target_lower >= 1) return(list(error = "Invalid combination."))
+            
+            num2 <- num1
+            num1 <- tryCatch({
+              uniroot(function(x) {
+                pnorm(x, mean, sd) - target_lower
+              }, lower = mean - 10 * sd, upper = mean)$root
+            }, error = function(e) return(NA))
+            
+            if (is.na(num1)) return(list(error = "Could not solve for lower threshold."))
+          }
+        }
+      }
     }
     
-    # Base normal distribution curve
     x_vals <- seq(mean - 4 * sd, mean + 4 * sd, length.out = 1000)
     y_vals <- dnorm(x_vals, mean, sd)
     df <- data.frame(x = x_vals, y = y_vals)
@@ -351,11 +440,9 @@ server <- function(input, output, session) {
     if (range_type == "above") {
       prob <- pnorm(num1, mean, sd, lower.tail = FALSE)
       shade_df <- df[df$x >= num1, ]
-      
     } else if (range_type == "below") {
       prob <- pnorm(num1, mean, sd)
       shade_df <- df[df$x <= num1, ]
-      
     } else if (range_type == "between") {
       if (num2 < num1) {
         error_msg <- "Lower threshold must be less than upper threshold for 'Between'."
@@ -363,13 +450,11 @@ server <- function(input, output, session) {
         prob <- pnorm(num2, mean, sd) - pnorm(num1, mean, sd)
         shade_df <- df[df$x >= num1 & df$x <= num2, ]
       }
-      
     } else if (range_type == "outside") {
       if (num2 < num1) {
         error_msg <- "Lower threshold must be less than upper threshold for 'Outside'."
       } else {
         prob <- 1 - (pnorm(num2, mean, sd) - pnorm(num1, mean, sd))
-        shade_df <- rbind(df[df$x <= num1, ], df[df$x >= num2, ])
       }
     }
     
@@ -377,29 +462,29 @@ server <- function(input, output, session) {
       return(list(error = error_msg))
     }
     
-    list(prob = prob, data = df, shaded = shade_df)
+    list(prob = prob, data = df, shaded = shade_df, num1 = num1, num2 = num2)
   })
   
-  # Dynamic label and input rendering
-  output$dynamic_inputs <- renderUI({
-    if (input$range %in% c("between", "outside")) {
-      tagList(
-        numericInput("num1", "Lower Threshold", value = -1.96),
-        numericInput("num2", "Upper Threshold", value = 1.96)
-      )
-    } else {
-      numericInput("num1", "Threshold", value = 1.96)
-    }
-  })
-  
-  # Textual probability output
   output$norm_prob <- renderText({
     res <- norm_result()
     if (!is.null(res$error)) return(res$error)
     paste0("Probability = ", round(res$prob, 4))
   })
   
-  # Plot output
+  output$threshold_text <- renderText({
+    res <- norm_result()
+    if (!is.null(res$error)) return("")
+    if (input$range == "above") {
+      paste0("Threshold: Above ", round(res$num1, 4))
+    } else if (input$range == "below") {
+      paste0("Threshold: Below ", round(res$num1, 4))
+    } else if (input$range == "between") {
+      paste0("Threshold: Between ", round(res$num1, 4), " and ", round(res$num2, 4))
+    } else if (input$range == "outside") {
+      paste0("Threshold: Outside ", round(res$num1, 4), " and ", round(res$num2, 4))
+    }
+  })
+  
   output$norm_plot <- renderPlot({
     res <- norm_result()
     if (!is.null(res$error)) return(NULL)
@@ -410,47 +495,19 @@ server <- function(input, output, session) {
       theme_minimal()
     
     if (input$range == "outside") {
-      shade_left  <- subset(res$data, x <= input$num1)
-      shade_right <- subset(res$data, x >= input$num2)
+      left <- subset(res$data, x <= res$num1)
+      right <- subset(res$data, x >= res$num2)
       base_plot +
-        geom_area(data = shade_left, aes(x, y), fill = "lightblue", alpha = 0.5) +
-        geom_area(data = shade_right, aes(x, y), fill = "lightblue", alpha = 0.5)
+        geom_area(data = left, aes(x, y), fill = "lightblue", alpha = 0.5) +
+        geom_area(data = right, aes(x, y), fill = "lightblue", alpha = 0.5)
     } else {
       base_plot +
         geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
     }
   })
+
   
-  # Observer to update thresholds based on probability input
-  observe({
-    req(input$prob_input, input$mean, input$sd, input$range)
-    prob <- as.numeric(input$prob_input)
-    mean <- as.numeric(input$mean)
-    sd <- as.numeric(input$sd)
-    
-    isolate({
-      if (input$range == "below") {
-        threshold <- qnorm(prob, mean, sd)
-        updateNumericInput(session, "num1", value = threshold)
-      } else if (input$range == "above") {
-        threshold <- qnorm(1 - prob, mean, sd)
-        updateNumericInput(session, "num1", value = threshold)
-      } else if (input$range == "between") {
-        tail_prob <- (1 - prob) / 2
-        lower <- qnorm(tail_prob, mean, sd)
-        upper <- qnorm(1 - tail_prob, mean, sd)
-        updateNumericInput(session, "num1", value = lower)
-        updateNumericInput(session, "num2", value = upper)
-      } else if (input$range == "outside") {
-        central_prob <- 1 - prob
-        lower <- qnorm((1 - central_prob) / 2, mean, sd)
-        upper <- qnorm(1 - (1 - central_prob) / 2, mean, sd)
-        updateNumericInput(session, "num1", value = lower)
-        updateNumericInput(session, "num2", value = upper)
-      }
-    })
-  })
-  
+
   
   # ======================================================================
   # TAB 6: t-Distribution

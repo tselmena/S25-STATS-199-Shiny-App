@@ -153,50 +153,42 @@ ui <- fluidPage(
       "Normal Distribution",
       sidebarLayout(
         sidebarPanel(
-          numericInput("mean", "Mean", value = 0),
-          numericInput("sd", "Standard Deviation", value = 1, min = 0.001),
+          selectInput("mode", "Select Mode", 
+                      choices = c("Normal Calculator" = "normal", 
+                                  "Inverse Calculator" = "inverse")),
+          
+          numericInput("mean", "Mean", value = 0, step = 0.01),
+          numericInput("sd", "Standard Deviation", value = 1, step = 0.01),
           
           radioButtons(
             inputId = "range",
             label = "Select the range:",
-            choices = c(
-              "Above" = "above",
-              "Below" = "below",
-              "Between" = "between",
-              "Outside" = "outside"
-            ),
+            choices = c("Above" = "above", "Below" = "below", 
+                        "Between" = "between", "Outside" = "outside"),
             selected = "above"
           ),
           
-          # Dynamic UI for threshold and probability input
+          conditionalPanel(
+            condition = "input.mode == 'inverse' && (input.range == 'between' || input.range == 'outside')",
+            checkboxInput("symmetric", "Symmetric Thresholds", value = TRUE)
+          ),
+          
           uiOutput("dynamic_inputs"),
-          numericInput("prob_input", "Probability", value = 0.025, min = 0, max = 1, step = 0.001)
+          
+          conditionalPanel(
+            condition = "input.mode == 'inverse'",
+            numericInput("prob_input", "Desired Probability", value = 0.025, min = 0, max = 1, step = 0.01)
+          )
         ),
+        
         mainPanel(
           textOutput("norm_prob"),
+          textOutput("threshold_text"),
           plotOutput("norm_plot")
         )
       )
     ),
-    
-    # ======================================================================
-    # TAB 6: t-Distribution
-    # ======================================================================
-    
-    tabPanel(
-      "t-Distribution",
-      sidebarLayout(sidebarPanel(
-        
-        # insert content here
-        
-        ), 
-      mainPanel(
-        
-        # insert content here
-        
-        )
-      )
-    ),
+ 
     
     # ======================================================================
     # TAB 7: Chi-square Distribution
