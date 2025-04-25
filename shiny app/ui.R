@@ -153,8 +153,8 @@ ui <- fluidPage(
       "Normal Distribution",
       sidebarLayout(
         sidebarPanel(
-          selectInput("mode", "Select Mode", 
-                      choices = c("Normal Calculator" = "normal", 
+          selectInput("mode", "Select Mode:", 
+                      choices = c("Distribution Calculator" = "normal", 
                                   "Inverse Calculator" = "inverse")),
           
           numericInput("mean", "Mean", value = 0, step = 0.01),
@@ -162,10 +162,10 @@ ui <- fluidPage(
           
           radioButtons(
             inputId = "range",
-            label = "Select the range:",
+            label = "Select Range:",
             choices = c("Above" = "above", "Below" = "below", 
                         "Between" = "between", "Outside" = "outside"),
-            selected = "above"
+            selected = "between"  # default now set to "between"
           ),
           
           conditionalPanel(
@@ -177,7 +177,7 @@ ui <- fluidPage(
           
           conditionalPanel(
             condition = "input.mode == 'inverse'",
-            numericInput("prob_input", "Desired Probability", value = 0.025, min = 0, max = 1, step = 0.01)
+            numericInput("prob_input", "Desired Probability", value = 0.95, min = 0, max = 1, step = 0.01)
           )
         ),
         

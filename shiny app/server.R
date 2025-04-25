@@ -315,46 +315,102 @@ server <- function(input, output, session) {
   # ======================================================================
   # TAB 5: Normal Distribution
   # ======================================================================
-  
   observe({
     if (input$mode == "inverse" && input$range %in% c("between", "outside")) {
       updateCheckboxInput(session, "symmetric", value = TRUE)
     }
   })
   
+  thresholds <- reactiveValues(num1 = -1.96, num2 = 1.96)
+  threshold_locked_by_user <- reactiveVal(FALSE)
+  
+  observeEvent(input$num1, {
+    isolate({
+      if (!is.null(input$num1) && !is.na(input$num1)) {
+        thresholds$num1 <- input$num1
+        threshold_locked_by_user(TRUE)
+      }
+    })
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$num2, {
+    isolate({
+      if (!is.null(input$num2) && !is.na(input$num2)) {
+        thresholds$num2 <- input$num2
+      }
+    })
+  }, ignoreInit = TRUE)
+  
   output$dynamic_inputs <- renderUI({
     if (input$mode == "normal") {
       if (input$range %in% c("between", "outside")) {
         tagList(
-          numericInput("num1", "Lower Threshold", value = -1.96),
-          numericInput("num2", "Upper Threshold", value = 1.96)
+          numericInput("num1", "Lower Threshold", value = thresholds$num1, step = 0.01),
+          numericInput("num2", "Upper Threshold", value = thresholds$num2, step = 0.01)
         )
       } else {
-        numericInput("num1", "Threshold", value = 1.96)
+        numericInput("num1", "Threshold", value = thresholds$num1, step = 0.01)
       }
     } else {
-      if (input$range %in% c("above", "below")) {
-        return(NULL)
-      } else if (input$symmetric) {
-        return(NULL)
-      } else {
-        tagList(
-          radioButtons("known_side", "Known Threshold Is:",
-                       choices = c("Lower" = "lower", "Upper" = "upper"),
-                       selected = "lower"),
-          uiOutput("single_input_ui")
-        )
-      }
+      if (input$range %in% c("above", "below")) return(NULL)
+      if (input$symmetric) return(NULL)
+      
+      tagList(
+        radioButtons("known_side", "Known Threshold Is:",
+                     choices = c("Lower" = "lower", "Upper" = "upper"),
+                     selected = "lower"),
+        uiOutput("single_input_ui")
+      )
     }
   })
   
   output$single_input_ui <- renderUI({
-    if (input$mode == "inverse" && !input$symmetric &&
-        input$range %in% c("between", "outside")) {
-      label <- if (input$known_side == "lower") "Lower Threshold" else "Upper Threshold"
-      numericInput("num1", label, value = 1.0)
-    }
+    numericInput("num1",
+                 label = if (input$known_side == "lower") "Lower Threshold" else "Upper Threshold",
+                 value = thresholds$num1,
+                 step = 0.01)
   })
+  
+  calculate_asymmetric_thresholds <- function(known_side, known_value, prob_input, mean, sd, range_type) {
+    if (range_type == "between") {
+      if (known_side == "lower") {
+        p_lower <- pnorm(known_value, mean, sd)
+        target_upper <- prob_input + p_lower
+        if (target_upper <= 0 || target_upper >= 1) return(list(error = "Invalid probability or threshold input."))
+        computed <- qnorm(target_upper, mean, sd)
+        return(list(num1 = known_value, num2 = computed))
+      } else {
+        p_upper <- 1 - pnorm(known_value, mean, sd)
+        target_lower <- prob_input + p_upper
+        if (target_lower <= 0 || target_lower >= 1) return(list(error = "Invalid probability or threshold input."))
+        computed <- qnorm(1 - target_lower, mean, sd)
+        return(list(num1 = computed, num2 = known_value))
+      }
+    } else if (range_type == "outside") {
+      if (known_side == "lower") {
+        p_lower <- pnorm(known_value, mean, sd)
+        target_upper <- prob_input - p_lower
+        if (target_upper <= 0 || target_upper >= 1) return(list(error = "Invalid combination."))
+        upper <- tryCatch({
+          uniroot(function(x) pnorm(x, mean, sd, lower.tail = FALSE) - target_upper,
+                  lower = mean, upper = mean + 10 * sd)$root
+        }, error = function(e) NA)
+        if (is.na(upper)) return(list(error = "Could not solve for upper threshold."))
+        return(list(num1 = known_value, num2 = upper))
+      } else {
+        p_upper <- 1 - pnorm(known_value, mean, sd)
+        target_lower <- prob_input - p_upper
+        if (target_lower <= 0 || target_lower >= 1) return(list(error = "Invalid combination."))
+        lower <- tryCatch({
+          uniroot(function(x) pnorm(x, mean, sd) - target_lower,
+                  lower = mean - 10 * sd, upper = mean)$root
+        }, error = function(e) NA)
+        if (is.na(lower)) return(list(error = "Could not solve for lower threshold."))
+        return(list(num1 = lower, num2 = known_value))
+      }
+    }
+    return(list(error = "Invalid range or side."))
+  }
   
   norm_result <- reactive({
     req(input$mean, input$sd, input$range, input$mode)
@@ -373,58 +429,24 @@ server <- function(input, output, session) {
         num1 <- qnorm(prob_input, mean, sd)
       } else if (range_type == "above") {
         num1 <- qnorm(1 - prob_input, mean, sd)
-      } else if (range_type == "between") {
-        if (input$symmetric) {
-          tail_prob <- (1 - prob_input) / 2
-          dist <- qnorm(1 - tail_prob, mean, sd) - mean
+      } else if (input$symmetric && range_type %in% c("between", "outside")) {
+        tail_prob <- if (range_type == "between") (1 - prob_input) / 2 else prob_input / 2
+        dist <- qnorm(1 - tail_prob, mean, sd) - mean
+        if (range_type == "between") {
           num1 <- mean - dist
           num2 <- mean + dist
         } else {
-          if (input$known_side == "lower" && !is.na(num1)) {
-            p_lower <- pnorm(num1, mean, sd)
-            tail_prob <- prob_input - p_lower
-            if (tail_prob <= 0 || tail_prob >= 1) return(list(error = "Invalid input."))
-            num2 <- qnorm(p_lower + tail_prob, mean, sd)
-          } else if (input$known_side == "upper" && !is.na(num1)) {
-            p_upper <- 1 - pnorm(num1, mean, sd)
-            tail_prob <- prob_input - p_upper
-            if (tail_prob <= 0 || tail_prob >= 1) return(list(error = "Invalid input."))
-            num2 <- num1
-            num1 <- qnorm(tail_prob, mean, sd)
-          }
-        }
-      } else if (range_type == "outside") {
-        if (input$symmetric) {
-          tail_prob <- prob_input / 2
           num1 <- qnorm(tail_prob, mean, sd)
           num2 <- qnorm(1 - tail_prob, mean, sd)
-        } else {
-          if (input$known_side == "lower" && !is.na(num1)) {
-            p_lower <- pnorm(num1, mean, sd)
-            target_upper <- prob_input - p_lower
-            if (target_upper <= 0 || target_upper >= 1) return(list(error = "Invalid combination."))
-            
-            num2 <- tryCatch({
-              uniroot(function(x) {
-                pnorm(x, mean, sd, lower.tail = FALSE) - target_upper
-              }, lower = mean, upper = mean + 10 * sd)$root
-            }, error = function(e) return(NA))
-            
-            if (is.na(num2)) return(list(error = "Could not solve for upper threshold."))
-          } else if (input$known_side == "upper" && !is.na(num1)) {
-            p_upper <- 1 - pnorm(num1, mean, sd)
-            target_lower <- prob_input - p_upper
-            if (target_lower <= 0 || target_lower >= 1) return(list(error = "Invalid combination."))
-            
-            num2 <- num1
-            num1 <- tryCatch({
-              uniroot(function(x) {
-                pnorm(x, mean, sd) - target_lower
-              }, lower = mean - 10 * sd, upper = mean)$root
-            }, error = function(e) return(NA))
-            
-            if (is.na(num1)) return(list(error = "Could not solve for lower threshold."))
-          }
+        }
+      } else {
+        if (!is.na(num1)) {
+          result <- calculate_asymmetric_thresholds(input$known_side, num1, prob_input, mean, sd, range_type)
+          if (!is.null(result$error)) return(list(error = result$error))
+          num1 <- result$num1
+          num2 <- result$num2
+          thresholds$num1 <- num1
+          thresholds$num2 <- num2
         }
       }
     }
@@ -444,23 +466,19 @@ server <- function(input, output, session) {
       prob <- pnorm(num1, mean, sd)
       shade_df <- df[df$x <= num1, ]
     } else if (range_type == "between") {
-      if (num2 < num1) {
-        error_msg <- "Lower threshold must be less than upper threshold for 'Between'."
-      } else {
+      if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold for 'Between'."
+      else {
         prob <- pnorm(num2, mean, sd) - pnorm(num1, mean, sd)
         shade_df <- df[df$x >= num1 & df$x <= num2, ]
       }
     } else if (range_type == "outside") {
-      if (num2 < num1) {
-        error_msg <- "Lower threshold must be less than upper threshold for 'Outside'."
-      } else {
+      if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold for 'Outside'."
+      else {
         prob <- 1 - (pnorm(num2, mean, sd) - pnorm(num1, mean, sd))
       }
     }
     
-    if (!is.null(error_msg)) {
-      return(list(error = error_msg))
-    }
+    if (!is.null(error_msg)) return(list(error = error_msg))
     
     list(prob = prob, data = df, shaded = shade_df, num1 = num1, num2 = num2)
   })
@@ -505,6 +523,9 @@ server <- function(input, output, session) {
         geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
     }
   })
+  
+  
+  
 
   
 
