@@ -176,8 +176,20 @@ ui <- fluidPage(
           uiOutput("dynamic_inputs"),
           
           conditionalPanel(
-            condition = "input.mode == 'inverse'",
-            numericInput("prob_input", "Desired Probability", value = 0.95, min = 0, max = 1, step = 0.01)
+            condition = "input.mode == 'inverse' && (input.range == 'between' || input.range == 'outside')",
+            numericInput("prob_input", "Desired Probability", value = 0.95, step = 0.01)
+          ),
+          
+          conditionalPanel(
+            condition = "input.mode == 'inverse' && input.range != 'between' && input.range != 'outside'",
+            numericInput("prob_input", "Probability", value = 0.95, step = 0.01)
+          ),
+          
+          conditionalPanel(
+            condition = "input.mode == 'inverse' && input.range != 'between' && input.range != 'outside'",
+            radioButtons("known_side", "Known Threshold Is:",
+                         choices = c("Lower" = "lower", "Upper" = "upper"),
+                         selected = "lower")
           )
         ),
         

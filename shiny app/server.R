@@ -315,6 +315,10 @@ server <- function(input, output, session) {
   # ======================================================================
   # TAB 5: Normal Distribution
   # ======================================================================
+
+  debounced_num1 <- debounce(reactive(input$num1), 300)
+  debounced_num2 <- debounce(reactive(input$num2), 300)
+  
   observe({
     if (input$mode == "inverse" && input$range %in% c("between", "outside")) {
       updateCheckboxInput(session, "symmetric", value = TRUE)
@@ -323,20 +327,33 @@ server <- function(input, output, session) {
   
   thresholds <- reactiveValues(num1 = -1.96, num2 = 1.96)
   threshold_locked_by_user <- reactiveVal(FALSE)
+  updating_thresholds <- reactiveVal(FALSE)
   
-  observeEvent(input$num1, {
+  observeEvent(debounced_num1(), {
+    if (updating_thresholds()) return()  # prevent feedback loop
+    
     isolate({
-      if (!is.null(input$num1) && !is.na(input$num1)) {
-        thresholds$num1 <- input$num1
+      if (!is.null(debounced_num1()) && !is.na(debounced_num1())) {
+        if (input$mode == "inverse" && input$range %in% c("between", "outside") && !input$symmetric) {
+          if (input$known_side == "upper") {
+            thresholds$num2 <- debounced_num1()  # Treat as upper
+          } else {
+            thresholds$num1 <- debounced_num1()  # Treat as lower
+          }
+        } else {
+          thresholds$num1 <- debounced_num1()
+        }
         threshold_locked_by_user(TRUE)
       }
     })
-  }, ignoreInit = TRUE)
+  })
   
-  observeEvent(input$num2, {
+  observeEvent(debounced_num2(), {
+    if (updating_thresholds()) return()  # prevent feedback loop
+    
     isolate({
-      if (!is.null(input$num2) && !is.na(input$num2)) {
-        thresholds$num2 <- input$num2
+      if (!is.null(debounced_num2()) && !is.na(debounced_num2())) {
+        thresholds$num2 <- debounced_num2()
       }
     })
   }, ignoreInit = TRUE)
@@ -345,11 +362,11 @@ server <- function(input, output, session) {
     if (input$mode == "normal") {
       if (input$range %in% c("between", "outside")) {
         tagList(
-          numericInput("num1", "Lower Threshold", value = thresholds$num1, step = 0.01),
-          numericInput("num2", "Upper Threshold", value = thresholds$num2, step = 0.01)
+          numericInput("num1", "Lower Threshold", value = round(thresholds$num1, 4), step = 0.01),
+          numericInput("num2", "Upper Threshold", value = round(thresholds$num2, 4), step = 0.01)
         )
       } else {
-        numericInput("num1", "Threshold", value = thresholds$num1, step = 0.01)
+        numericInput("num1", "Threshold", value = round(thresholds$num1, 4), step = 0.01)
       }
     } else {
       if (input$range %in% c("above", "below")) return(NULL)
@@ -367,7 +384,7 @@ server <- function(input, output, session) {
   output$single_input_ui <- renderUI({
     numericInput("num1",
                  label = if (input$known_side == "lower") "Lower Threshold" else "Upper Threshold",
-                 value = thresholds$num1,
+                 value = if (input$known_side == "lower") round(thresholds$num1, 4) else round(thresholds$num2, 4),
                  step = 0.01)
   })
   
@@ -382,7 +399,7 @@ server <- function(input, output, session) {
       } else {
         p_upper <- 1 - pnorm(known_value, mean, sd)
         target_lower <- prob_input + p_upper
-        if (target_lower <= 0 || target_lower >= 1) return(list(error = "Invalid probability or threshold input."))
+        if (target_lower <= 0 || target_lower >= 1) return(list(error = "Invalid probability and threshold combination."))
         computed <- qnorm(1 - target_lower, mean, sd)
         return(list(num1 = computed, num2 = known_value))
       }
@@ -409,7 +426,7 @@ server <- function(input, output, session) {
         return(list(num1 = lower, num2 = known_value))
       }
     }
-    return(list(error = "Invalid range or side."))
+    return(list(error = "Invalid range or threshold."))
   }
   
   norm_result <- reactive({
@@ -421,8 +438,8 @@ server <- function(input, output, session) {
     mode <- input$mode
     prob_input <- if (!is.null(input$prob_input)) as.numeric(input$prob_input) else NA
     
-    num1 <- if (!is.null(input$num1)) as.numeric(input$num1) else NA
-    num2 <- if (!is.null(input$num2)) as.numeric(input$num2) else NA
+    num1 <- if (!is.null(debounced_num1())) as.numeric(debounced_num1()) else NA
+    num2 <- if (!is.null(debounced_num2())) as.numeric(debounced_num2()) else NA
     
     if (mode == "inverse") {
       if (range_type == "below") {
@@ -445,8 +462,10 @@ server <- function(input, output, session) {
           if (!is.null(result$error)) return(list(error = result$error))
           num1 <- result$num1
           num2 <- result$num2
+          updating_thresholds(TRUE)
           thresholds$num1 <- num1
           thresholds$num2 <- num2
+          updating_thresholds(FALSE)
         }
       }
     }
@@ -466,13 +485,13 @@ server <- function(input, output, session) {
       prob <- pnorm(num1, mean, sd)
       shade_df <- df[df$x <= num1, ]
     } else if (range_type == "between") {
-      if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold for 'Between'."
+      if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold."
       else {
         prob <- pnorm(num2, mean, sd) - pnorm(num1, mean, sd)
         shade_df <- df[df$x >= num1 & df$x <= num2, ]
       }
     } else if (range_type == "outside") {
-      if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold for 'Outside'."
+      if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold."
       else {
         prob <- 1 - (pnorm(num2, mean, sd) - pnorm(num1, mean, sd))
       }
@@ -523,6 +542,7 @@ server <- function(input, output, session) {
         geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
     }
   })
+  
   
   
   
