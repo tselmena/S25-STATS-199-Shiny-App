@@ -7,14 +7,25 @@ server <- function(input, output, session) {
   # ======================================================================
   
   calc_results <- reactive({
-    p0 <- input$p
-    n <- input$n
-    ph <- input$p_hat
-    x <- round(ph * n)
-    if (n <= 0 || x < 0 || x > n) {
-      return(NULL)
+    req(input$n)
+    if (isTRUE(input$use_successes)) {
+      x  <- input$x_succ
+      ph <- x / input$n
+    } else {
+      ph <- input$p_hat
+      x  <- round(ph * input$n)
     }
-    prop.test(x, n, p = p0, alternative = input$alternative, 
+
+    validate(
+      need(input$n > 0, "Sample size n must be > 0"),
+      need(x >= 0 && x <= input$n, "x must be between 0 and n"),
+      need(input$p >= 0 && input$p <= 1,
+           "Hypothesised proportion p0 must be in [0,1]"),
+      need(ph >= 0 && ph <= 1,
+           "Sample proportion p_hat must be in [0,1]")
+    )
+    
+    prop.test(x, input$n, p = input$p, alternative = input$alternative,
               conf.level = as.numeric(input$conf_level))
   })
   
@@ -29,13 +40,6 @@ server <- function(input, output, session) {
         output$ci_conclusion <- renderText({ "Invalid input parameters." })
         return()
       }
-      ci <- test_results$conf.int
-      output$ci_label <- renderText({"Confidence Interval"})
-      output$ci_conclusion <- renderText({
-        paste0("We are ", round(as.numeric(input$conf_level) * 100),
-               "% confident that the true population proportion lies in the interval [",
-               round(ci[1], 3), ", ", round(ci[2], 3), "].")
-      })
     } else {
       # hide or clear these outputs if the checkbox is not selected
       output$ci_label <- renderText({ "" })
@@ -47,49 +51,44 @@ server <- function(input, output, session) {
   # Plot
   # ----------------------------------------------------------------------
   output$plot <- renderPlot({
-    # if neither test or CI is selected, show blank plot
     if (!input$show_test && !input$show_ci) {
-      plot.new()
-      text(0.5, 0.5, "No test or CI selected.", cex = 1.4)
-      return()
-    }
-    test_res <- calc_results()
-    if (is.null(test_res)) {
-      plot.new()
-      text(0.5, 0.5, "Invalid input parameters", cex = 1.5)
+      plot.new(); text(0.5, 0.5, "No test or CI selected", cex = 1.4)
       return()
     }
     
-    x_vals <- 0:input$n
-    x_obs <- round(input$p_hat * input$n)
-    binom_probs<- dbinom(x_vals, size = input$n, prob = input$p)
-    
-    # default bar color
-    bar_colors <- rep("lightgrey", length(x_vals))
-    
-    # highlight region depending on alternative
-    if (input$alternative == "less") {
-      bar_colors[x_vals <= x_obs] <- "#FFD100"
-    } else if (input$alternative == "greater") {
-      bar_colors[x_vals >= x_obs] <- "#FFD100"
+    x_obs <- if (isTRUE(input$use_successes)) {
+      input$x_succ
     } else {
-      # two-sided
-      mu <- input$n * input$p
-      dist_from_mean <- abs(x_obs - mu)
-      x_lower <- floor(mu - dist_from_mean)
-      x_upper <- ceiling(mu + dist_from_mean)
-      index <- which(x_vals <= x_lower | x_vals >= x_upper)
-      bar_colors[index] <- "#FFD100"
+      round(input$p_hat * input$n)
     }
-    barplot(
-      height = binom_probs, 
-      names.arg = x_vals, 
-      col = bar_colors,
-      xlab = "Number of Successes (x)",
-      ylab = "Probability",
-      main = "Sampling Distribution Under Null Hypothesis"
-    )
+    
+    if (x_obs < 0 || x_obs > input$n) {
+      plot.new(); text(0.5, 0.5, "Invalid input parameters", cex = 1.5)
+      return()
+    }
+  
+    x_vals <- 0:input$n
+    probs <- dbinom(x_vals, size = input$n, prob = input$p)
+    bar_col <- rep("lightgrey", length(x_vals))
+    
+    # rejection region
+    if (input$alternative == "less") {
+      bar_col[x_vals <= x_obs] <- "#FFD100"
+    } else if (input$alternative == "greater") {
+      bar_col[x_vals >= x_obs] <- "#FFD100"
+    } else {                                     
+      mu <- input$n * input$p
+      d <- abs(x_obs - mu)
+      idx  <- which(x_vals <= floor(mu - d) |
+                      x_vals >= ceiling(mu + d))
+      bar_col[idx] <- "#FFD100"
+    }
+    
+    barplot(height = probs, names.arg = x_vals, col = bar_col, border = "black",
+            space = 0.2, xlab = "Number of Successes (x)", ylab = "Probability",
+            main = "Sampling Distribution Under Null Hypothesis")
   })
+  
   
   # ----------------------------------------------------------------------
   # Show or hide the test results and conclusions
@@ -102,36 +101,57 @@ server <- function(input, output, session) {
         if (is.null(test_res)) {
           return(gt(data.frame(Warning = "Invalid input parameters.")))
         }
-        p_value <- test_res$p.value
+        p_value <- formatC(test_res$p.value, format = "f", digits = 4)
+        
+        sample_p <- as.numeric(test_res$estimate)       
+        successes <- round(sample_p * input$n)           
+    
+        observeEvent(input$p_hat, {
+          if (!isTRUE(input$use_successes)) {
+            updateNumericInput(session, "x_succ",
+                               value = round(input$p_hat * input$n))
+          }
+        })
+        
+        observeEvent(input$x_succ, {
+          if (isTRUE(input$use_successes)) {
+            updateNumericInput(session, "p_hat",
+                               value = input$x_succ / input$n)
+          }
+        })
+        
         alt_str <- switch(
           input$alternative,
-          "less"      = paste0("p < ", input$p),
-          "greater"   = paste0("p > ", input$p),
+          "less" = paste0("p < ", input$p),
+          "greater" = paste0("p > ", input$p),
           "two.sided" = paste0("p ≠ ", input$p)
         )
 
         df <- data.frame(
           label = c(
-            "Null Hypothesis",
-            "Alternative Hypothesis",
-            "Sample Size",
-            "Number of Successes",
-            "Sample Proportion",
-            "p-value"
+            "$H_0$",
+            "$H_A$",
+            "$n$",
+            "$\\hat p$",
+            "$x$",
+            "$p‑value$"
           ),
           value = c(
             paste0("p = ", input$p),
             alt_str,
             input$n,
-            round(input$p_hat * input$n),
             round(test_res$estimate, 3),
+            round(input$p_hat * input$n),
             format(p_value, digits = 4)
           )
         )
         
-        df |> 
-          gt() |> tab_header(title = "One Proportion Test") |> 
-          tab_options(column_labels.hidden = TRUE) 
+        df |>
+          gt() |>                 
+          fmt_markdown(columns = label) |>      
+          tab_header(title = "One Proportion Test") |>
+          tab_options(column_labels.hidden = TRUE, 
+                      table.width = pct(100)) 
       })
       
       # conclusions (separate table below)
@@ -140,10 +160,9 @@ server <- function(input, output, session) {
         if (is.null(test_res)) {
           return(gt(data.frame(Warning = "Invalid input parameters.")))
         }
-        p_value   <- test_res$p.value
-        alpha     <- c(0.01, 0.05, 0.1)
-        decisions <- ifelse(p_value < alpha, "rejected", "not rejected")
-        
+        p_value <- formatC(test_res$p.value, format = "f", digits = 4)
+        alpha <- c(0.01, 0.05, 0.1)
+        decisions <- ifelse(p_value < alpha, "**rejected**", "**not rejected**")
         df <- data.frame(
           conclusions = paste0("The null hypothesis is ", decisions, " at \u03B1 = ", alpha)
         )
@@ -151,13 +170,47 @@ server <- function(input, output, session) {
         df |> 
           gt() |> 
           tab_header(title = "Test Conclusions") |> 
-          tab_options(column_labels.hidden = TRUE)
+          tab_options(column_labels.hidden = TRUE, 
+                      table.width = pct(100)
+                      ) |> 
+          fmt_markdown(columns = everything())
       })
-    } else {
+      } else {
       # clear if show_test is off
-      output$results_table <- renderText({ "" })
-      output$conclusions   <- renderText({ "" })
-    }
+        output$results_table <- renderText({ "" })
+        output$conclusions   <- renderText({ "" })
+      }
+    
+    ci_gt <- reactive({
+      req(input$show_ci)
+      test_res <- calc_results()
+      validate(need(!is.null(test_res), "Invalid input parameters."))
+      
+      ci <- test_res$conf.int
+      data.frame(
+        label = c("Confidence level", "Interval",
+                  "Hypothesized Proportion in Range"),
+        value = c(
+          paste0(round(as.numeric(input$conf_level)*100), "%"),
+          sprintf("[%.3f, %.3f]", ci[1], ci[2]),
+          ifelse(input$p >= ci[1] && input$p <= ci[2], "Yes", "No")
+        )
+      ) |>
+        gt() |>
+        fmt_markdown(columns = label) |>
+        tab_header(title = "Confidence Interval") |>
+        tab_options(column_labels.hidden = TRUE)
+    })
+    output$ci_table_side <- render_gt(
+      ci_gt() |> 
+        tab_options(column_labels.hidden = TRUE,
+                    table.width = pct(100)))
+    output$ci_table_bottom <- render_gt(
+      ci_gt() |> 
+        tab_options(column_labels.hidden = TRUE,
+                    table.width = pct(100))
+    )
+    
   })
  
   # ======================================================================

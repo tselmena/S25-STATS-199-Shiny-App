@@ -5,6 +5,7 @@ ui <- fluidPage(
   # theme
   theme = shinytheme("flatly"),
   
+  mathjax = TRUE,
   # title
   titlePanel("UCLA Intro Stats Calculator"),
   
@@ -15,8 +16,9 @@ ui <- fluidPage(
     tabPanel("One Proportion",
              sidebarLayout(
                sidebarPanel(
-                 # checkbox for CI
-                 checkboxInput("show_ci", "Confidence Interval", FALSE),
+                 # check box for CI and test ON
+                 checkboxInput("show_ci", "Confidence Interval", TRUE),
+                 checkboxInput("show_test", "Test", TRUE),
                  
                  # If CI is shown, let the user select the confidence level
                  conditionalPanel(
@@ -28,8 +30,6 @@ ui <- fluidPage(
                      selected = 0.95
                    )
                  ),
-                 # checkbox to turn the entire test on/off
-                 checkboxInput("show_test", "Test", TRUE),
                  
                  # only show the test-type radio buttons if "Test" is checked
                  conditionalPanel(
@@ -43,36 +43,60 @@ ui <- fluidPage(
                      selected = "two.sided"
                    )
                  ),
+
+                 # Numeric inputs for the test
+                 conditionalPanel(
+                   condition = "!(input.show_ci == true && input.show_test == false)",
+                   numericInput("p", HTML("Hypothesized proportion (p<sub>0</sub>)"), 0.50, step = 0.01)
+                 ),
                  
-                 # Mumeric inputs for the test
-                 numericInput("p", "Hypothesized Proportion", 0.5),
-                 numericInput("n", "Sample Size", 30),
-                 numericInput("p_hat", "Sample Proportion", 0.6)
+                 numericInput("n", "Sample Size (n)", 30, step = 1),
+                 
+                 conditionalPanel(
+                   condition = "input.use_successes == false",
+                   numericInput("p_hat", HTML("Sample proportion (p&#770;)"), 0.30, step = 0.01)
+                 ),
+                 
+                 conditionalPanel(
+                   condition = "input.use_successes == true",
+                   numericInput("x_succ", "Number of successes  (x)", 10, step = 1)
+                 ),
+                 
+                 checkboxInput("use_successes",
+                               "Use number of successes instead", FALSE)
                ),
                
                mainPanel(
-                 # main plot (always on)
                  plotOutput("plot"),
-                 # confidence interval text
-                 textOutput("ci_label"),
-                 tags$head(
-                   tags$style("#ci_label {color: ##000000; font-size: 25px; font-style: bold;}")
-                 ),
-                 textOutput("ci_conclusion"),
-                 # this is just to change color / make font larger
-                 tags$head(
-                   tags$style("#ci_conclusion {color: #2774AE; font-size: 20px; font-style: bold;}")
-                 ),
-        
-                 # if "Test" is checked, show results and conclusions
+                 # TEST ON 
                  conditionalPanel(
                    condition = "input.show_test == true",
-                   gt_output("results_table"),
-                   gt_output("conclusions")
+                   splitLayout(
+                     cellWidths = c("30%", "55%"),
+                     cellArgs   = list(style = "padding:0; margin:0; vertical-align:top;"),
+                     
+                     # left  column
+                     div(gt_output("results_table")),
+                     
+                     # right column: conclusions + CI
+                     div(
+                       style = "margin-left:20px;              /* horizontal gap */        \
+             display:flex; flex-direction:column; row-gap:0px;",
+                       gt_output("conclusions"),
+                       conditionalPanel(
+                         condition = "input.show_ci == true",
+                         gt_output("ci_table_side")     
+                       )
+                     )
+                   )
                  ),
                  
-                 # table for CI (rendered by show_ci)
-                 #gt_output("ci_table")
+                 # TEST OFF and CI ON 
+                 conditionalPanel(
+                   condition = "input.show_test == false && input.show_ci == true",
+                   div(style = "margin-top:25px; width:fit-content;",
+                       gt_output("ci_table_bottom"))            
+                 )
                )
              )
     ),
@@ -96,7 +120,7 @@ ui <- fluidPage(
         
         # each input given default values
         numericInput("mu", "Hypothesized Mean", 100),
-        numericInput("n", "Sample Size", 25),
+        numericInput("n", "Sample Size", 30),
         numericInput("x_bar", "Sample Mean", 98),
         numericInput("s", "Sample Standard Deviation", 6)
       ),
