@@ -529,32 +529,32 @@ server <- function(input, output, session) {
   ## ────────────────────────────────────────────────────────────────────
   ##  3.  Dual‑PMF plot
   ## ────────────────────────────────────────────────────────────────────
-  output$d2_plot <- renderPlot({
-    if (!input$d2_show_test && !input$d2_show_ci) {
-      plot.new(); text(0.5,0.5,"No test or CI selected", cex = 1.4)
-      return()
-    }
-    
-    res <- d2_results()
-    x1 <- 0:res$n1;  x2 <- 0:res$n2
-    p1 <- dbinom(x1, res$n1, res$p1)
-    p2 <- dbinom(x2, res$n2, res$p2)
-    
-    ylim <- c(0, 1.1*max(c(p1,p2)))
-    barplot(p1, names.arg = x1, col = "lightgrey", border="black",
-            space = 0.2, ylim = ylim,
-            xlab = "Number of Successes (x)",
-            ylab = "Probability",
-            main = "Sampling Distributions Under Null Hypothesis")
-    
-    barplot(p2, names.arg = x2, col = "#6BB6FF", border="black",
-            space = 0.2, add = TRUE, axes = FALSE)
-    
-    legend("topright", inset = 0.02,
-           legend = c("Group 1","Group 2"),
-           fill   = c("lightgrey","#6BB6FF"),
-           bty = "n", cex = 0.9)
-  })
+  # output$d2_plot <- renderPlot({
+  #   if (!input$d2_show_test && !input$d2_show_ci) {
+  #     plot.new(); text(0.5,0.5,"No test or CI selected", cex = 1.4)
+  #     return()
+  #   }
+  #   
+  #   res <- d2_results()
+  #   x1 <- 0:res$n1;  x2 <- 0:res$n2
+  #   p1 <- dbinom(x1, res$n1, res$p1)
+  #   p2 <- dbinom(x2, res$n2, res$p2)
+  #   
+  #   ylim <- c(0, 1.1*max(c(p1,p2)))
+  #   barplot(p1, names.arg = x1, col = "lightgrey", border="black",
+  #           space = 0.2, ylim = ylim,
+  #           xlab = "Number of Successes (x)",
+  #           ylab = "Probability",
+  #           main = "Sampling Distributions Under Null Hypothesis")
+  #   
+  #   barplot(p2, names.arg = x2, col = "#6BB6FF", border="black",
+  #           space = 0.2, add = TRUE, axes = FALSE)
+  #   
+  #   legend("topright", inset = 0.02,
+  #          legend = c("Group 1","Group 2"),
+  #          fill   = c("lightgrey","#6BB6FF"),
+  #          bty = "n", cex = 0.9)
+  # })
   
   # ======================================================================
   # TAB 4: Difference Two Means
