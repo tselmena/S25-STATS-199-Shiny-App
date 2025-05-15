@@ -19,7 +19,7 @@ server <- function(input, output, session) {
     validate(
       need(input$n > 0, "Sample size n must be > 0"),
       need(x >= 0 && x <= input$n, "x must be between 0 and n"),
-      need(input$p >= 0 && input$p <= 1,
+      need(input$p > 0 && input$p < 1,
            "Hypothesised proportion p0 must be in [0,1]"),
       need(ph >= 0 && ph <= 1,
            "Sample proportion p_hat must be in [0,1]")
@@ -132,16 +132,16 @@ server <- function(input, output, session) {
             "$H_0$",
             "$H_A$",
             "$n$",
-            "$\\hat p$",
             "$x$",
+            "$\\hat p$",
             "$p‑value$"
           ),
           value = c(
             paste0("p = ", input$p),
             alt_str,
             input$n,
-            round(test_res$estimate, 3),
             round(input$p_hat * input$n),
+            round(test_res$estimate, 3),
             format(p_value, digits = 4)
           )
         )
@@ -201,12 +201,33 @@ server <- function(input, output, session) {
         tab_header(title = "Confidence Interval") |>
         tab_options(column_labels.hidden = TRUE)
     })
+    
+    ci_gt_testoff <- reactive({
+      req(input$show_ci)
+      test_res <- calc_results()
+      validate(need(!is.null(test_res), "Invalid input parameters."))
+      
+      ci <- test_res$conf.int
+      data.frame(
+        label = c("Confidence level", "Interval"),
+        value = c(
+          paste0(round(as.numeric(input$conf_level)*100), "%"),
+          sprintf("[%.3f, %.3f]", ci[1], ci[2])
+        )
+      ) |>
+        gt() |>
+        fmt_markdown(columns = label) |>
+        tab_header(title = "Confidence Interval") |>
+        tab_options(column_labels.hidden = TRUE)
+    })
+    
     output$ci_table_side <- render_gt(
       ci_gt() |> 
         tab_options(column_labels.hidden = TRUE,
                     table.width = pct(100)))
+    
     output$ci_table_bottom <- render_gt(
-      ci_gt() |> 
+      ci_gt_testoff() |> 
         tab_options(column_labels.hidden = TRUE,
                     table.width = pct(100))
     )
@@ -216,147 +237,324 @@ server <- function(input, output, session) {
   # ======================================================================
   # TAB 2: One Mean
   # ======================================================================
-  
-  one_mean_test_results <- reactive({
+
+  ## ---------- core reactive -------------------------------------------------
+  mean_results <- reactive({
     
-    # get inputs from ui.R
-    mu <- input$mu
-    n <- input$n
-    x_bar <- input$x_bar
-    s <- input$s
-    df <- n - 1
+    n    <- input$mean_n
+    s    <- input$mean_s
+    mu0  <- input$mean_mu0
+    xbar <- input$mean_xbar
+    df   <- n - 1
     
-    # validate inputs
-    if (n <= 0 || s <= 0) {
-      return(NULL)
-    }
-    
-    # t-statistic
-    t_stat <- (x_bar - mu) / (s / sqrt(n))
-    p_val <- switch(
-      input$mean_alt,
-      "less" = pt(t_stat, df = df),
-      "greater" = 1 - pt(t_stat, df = df),
-      "two.sided" = 2 * pt(-abs(t_stat), df = df)
+    validate(
+      need(n  > 1,           "Sample size n must be > 1"),
+      need(s  > 0,           "Sample SD must be > 0")
     )
     
-    # construct a fake "t.test" object
-    list(
-      statistic = c(t = t_stat),
-      p.value = p_val,
-      estimate = c(mean = x_bar),
-      null.value = c(mu = mu),
-      alternative = input$mean_alt,
-      method = "One Sample t-test",
-      data.name = "Manually computed",
-      parameter = c(df = df)
-    )
+    t_stat <- (xbar - mu0) / (s / sqrt(n))
+    p_val  <- switch(input$mean_alt,
+                     "less"      = pt(t_stat, df),
+                     "greater"   = 1 - pt(t_stat, df),
+                     "two.sided" = 2 * (1 - pt(abs(t_stat), df)))
+    
+    conf   <- as.numeric(input$mean_conf_level)
+    moe    <- qt(1 - (1-conf)/2, df) * s / sqrt(n)
+    ci     <- xbar + c(-1,1) * moe
+    
+    list(n=n, s=s, df=df, mu0=mu0, xbar=xbar,
+         t_stat=t_stat, p_value=p_val, ci=ci)
   })
   
-  output$one_mean_test_table <- render_gt({
+  ## ---------- results table --------------------------------------------------
+  output$mean_results_table <- render_gt({
+    res <- mean_results()
     
-    # get test results
-    test_res <- one_mean_test_results()  
+    alt_sym <- switch(input$mean_alt,
+                      "less" = "<", "greater" = ">", "two.sided" = "≠")
     
-    alternative_str <- switch(
-      input$mean_alt, 
-      "less" = paste0("μ < ", input$mu),   # left-sided
-      "greater" = paste0("μ > ", input$mu), # right-sided
-      "two.sided" = paste0("μ ≠ ", input$mu) # two-sided
+    df <- data.frame(
+      label = c("$H_0$", "$H_A$",
+                "$n$", "$\\bar{x}$", "$s$",
+                "$t$", "$p$‑value"),
+      value = c(paste0("μ = ", res$mu0),
+                paste0("μ ", alt_sym, " ", res$mu0),
+                res$n,
+                round(res$xbar,3),
+                round(res$s,3),
+                round(res$t_stat,3),
+                format(res$p_value, digits = 4))
     )
     
-    df_results <- data.frame(
-      Label = c("Null Hypothesis",
-                "Alternative Hypothesis",
-                "Sample Size",
-                "Sample Mean",
-                "Sample SD",
-                "Degrees of Freedom",
-                "p-value"),
-      
-      Value = c(paste0("μ = ", input$mu), 
-                alternative_str, 
-                input$n, 
-                round(input$x_bar, 3),
-                round(input$s, 3),
-                round(test_res$parameter["df"], 2),
-                format(test_res$p.value, digits = 4))
-    )
-    
-    gt(df_results) |>
-      tab_header(title = "One Sample t-test Results") 
+    df |>
+      gt() |>
+      fmt_markdown(columns = label) |>
+      tab_header(title = "One Mean t‑Test") |>
+      tab_options(column_labels.hidden = TRUE,
+                  table.width = pct(100))
   })
   
-  output$one_mean_plot <- renderPlot({
+  ## ---------- conclusions table ---------------------------------------------
+  output$mean_conclusions <- render_gt({
+    res   <- mean_results()
+    alpha <- c(0.01,0.05,0.10)
+    dec   <- ifelse(res$p_value < alpha, "**rejected**", "**not rejected**")
     
-    # get test results
-    test_res <- one_mean_test_results()
+    data.frame(
+      conclusions = paste0("The null hypothesis is ",
+                           dec, " at α = ", alpha)
+    ) |>
+      gt() |>
+      tab_header(title = "Test Conclusions") |>
+      tab_options(column_labels.hidden = TRUE,
+                  table.width = pct(100)) |>
+      fmt_markdown(columns = everything())
+  })
+  
+  ## ---------- CI helper & renderers -----------------------------------------
+  mean_ci_gt <- reactive({
+    res <- mean_results()
+    data.frame(
+      label = c("Confidence level", "Interval"),
+      value = c(paste0(round(as.numeric(input$mean_conf_level) * 100), "%"),
+                sprintf("[%.3f, %.3f]", res$ci[1], res$ci[2]))
+    ) |>
+      gt() |>
+      tab_header(title = "Confidence Interval") |>
+      tab_options(column_labels.hidden = TRUE,
+                  table.width = pct(100))
+  })
+  
+  output$mean_ci_table_side   <- render_gt(mean_ci_gt())
+  output$mean_ci_table_bottom <- render_gt(mean_ci_gt())
+  
+  ## ---------- plot -----------------------------------------------------------
+  output$mean_plot <- renderPlot({
     
-    if (is.null(test_res)) {
-      plot.new()
-      text(0.5, 0.5, "Invalid input parameters", cex = 1.5)
+    if (!input$mean_show_test && !input$mean_show_ci) {
+      plot.new(); text(0.5,0.5,"No test or CI selected", cex = 1.4)
       return()
     }
     
-    n <- input$n
-    df <- n - 1
-    mu <- input$mu
-    x_bar <- input$x_bar
-    s <- input$s
-    se <- s / sqrt(n)
-    t_stat <- (x_bar - mu) / se
+    res <- mean_results()
     
-    x_vals <- seq(-4, 4, length.out = 400)
-    y_vals <- dt(x_vals, df)
+    x <- seq(-4,4,len=400)
+    y <- dt(x, df = res$df)
+    shade <- "#FFD100"
     
-    # fun fact: #2774AE is the official UCLA Blue color 
-    #bar_color <- "#2774AE"
-    shade_color <- "#FFD100"
+    plot(x, y, type="l", lwd=2, col="lightgrey",
+         xlab="t‑value", ylab="Density",
+         main="t‑Distribution Under Null Hypothesis")
     
-    plot(x_vals, y_vals, type = "l", lwd = 2, col = "lightgrey",
-         xlab = "t-value", ylab = "Density",
-         main = "t-Distribution Under Null Hypothesis")
+    if (input$mean_show_ci) {
+      alpha <- 1 - as.numeric(input$mean_conf_level)
+      t_cut <- qt(1 - alpha/2, res$df)
+      idx   <- x >= -t_cut & x <= t_cut
+      polygon(c(x[idx], rev(x[idx])),
+              c(y[idx], rep(0, sum(idx))),
+              col = "#D1E8FF", border = NA)  # light blue band
+    }
     
-    # shade gold area based on alternative
-    if (input$mean_alt == "less") {
-      x_shade <- x_vals[x_vals <= t_stat]
-      y_shade <- y_vals[x_vals <= t_stat]
-      polygon(c(min(x_shade), x_shade, max(x_shade)),
-              c(0, y_shade, 0),
-              col = shade_color, border = NA)
-      
-    } else if (input$mean_alt == "greater") {
-      x_shade <- x_vals[x_vals >= t_stat]
-      y_shade <- y_vals[x_vals >= t_stat]
-      polygon(c(min(x_shade), x_shade, max(x_shade)),
-              c(0, y_shade, 0),
-              col = shade_color, border = NA)
-      
-    } else if (input$mean_alt == "two.sided") {
-      t_crit <- abs(t_stat)
-      
-      # left tail
-      x_left <- x_vals[x_vals <= -t_crit]
-      y_left <- y_vals[x_vals <= -t_crit]
-      polygon(c(min(x_left), x_left, max(x_left)),
-              c(0, y_left, 0),
-              col = shade_color, border = NA)
-      
-      # right tail
-      x_right <- x_vals[x_vals >= t_crit]
-      y_right <- y_vals[x_vals >= t_crit]
-      polygon(c(min(x_right), x_right, max(x_right)),
-              c(0, y_right, 0),
-              col = shade_color, border = NA)
+    
+    if (input$mean_show_test) {
+      if (input$mean_alt == "less") {
+        idx <- x <= res$t_stat
+        polygon( c(x[idx], rev(x[idx])), c(y[idx], rep(0, sum(idx))),
+                 col = shade, border = NA )
+      } else if (input$mean_alt == "greater") {
+        idx <- x >= res$t_stat
+        polygon( c(x[idx], rev(x[idx])), c(y[idx], rep(0, sum(idx))),
+                 col = shade, border = NA )
+      } else {
+        crit <- abs(res$t_stat)
+        
+        idxL <- x <= -crit           # left tail indices
+        polygon( c(x[idxL], rev(x[idxL])), c(y[idxL], rep(0, sum(idxL))),
+                 col = shade, border = NA )
+        
+        idxR <- x >=  crit           # right tail indices
+        polygon( c(x[idxR], rev(x[idxR])), c(y[idxR], rep(0, sum(idxR))),
+                 col = shade, border = NA )
+      }
     }
   })
   
   # ======================================================================
   # TAB 3: Difference Two Proportion
   # ======================================================================
+
+  z_q <- function(conf) qnorm(1 - (1 - conf) / 2)
+  
+  d2_results <- reactive({
+    if (input$d2_use_successes1) {
+      x1 <- input$d2_x1
+      n1 <- input$d2_n1
+      p1 <- x1 / n1
+    } else {
+      p1 <- input$d2_p1hat
+      n1 <- input$d2_n1
+      x1 <- round(p1 * n1)
+    }
+    
+    if (input$d2_use_successes2) {
+      x2 <- input$d2_x2
+      n2 <- input$d2_n2
+      p2 <- x2 / n2
+    } else {
+      p2 <- input$d2_p2hat
+      n2 <- input$d2_n2
+      x2 <- round(p2 * n2)
+    }
+    
+    ## guard‑rails -----------------------------------------------------
+    validate(
+      need(n1 > 0 && n2 > 0,           "Sample sizes must be > 0"),
+      need(x1 >= 0 && x1 <= n1,        "x₁ must be between 0 and n₁"),
+      need(x2 >= 0 && x2 <= n2,        "x₂ must be between 0 and n₂"),
+      need(p1 >= 0 && p1 <= 1,         "p̂₁ must be in [0,1]"),
+      need(p2 >= 0 && p2 <= 1,         "p̂₂ must be in [0,1]")
+    )
+    
+    delta0 <- ifelse(abs(input$d2_delta0) > 1, input$d2_delta0 / 100,
+                     input$d2_delta0)
+    
+    ## Wald statistic --------------------------------------------------
+    diff_hat <- p1 - p2
+    se <- sqrt(p1*(1-p1)/n1 + p2*(1-p2)/n2)
+    z_stat <- (diff_hat - delta0) / se
+    
+    p_val <- switch(input$d2_alternative,
+                    "less"      = pnorm(z_stat),
+                    "greater"   = 1 - pnorm(z_stat),
+                    "two.sided" = 2 * (1 - pnorm(abs(z_stat))))
+    
+    ci <- diff_hat +
+      c(-1,1) * qnorm(1 - (1 - as.numeric(input$d2_conf_level))/2) * se
+    
+    list(n1=n1, n2=n2, x1=x1, x2=x2, p1=p1, p2=p2,
+         diff_hat = diff_hat,
+         z_stat   = z_stat,
+         p_value  = p_val,
+         ci       = ci)
+  })
+  
+  ## ────────────────────────────────────────────────────────────────────
+  ##  2.  Tables
+  ## ────────────────────────────────────────────────────────────────────
+  output$d2_results_table <- render_gt({
+    res <- d2_results()
+    
+    alt_str2 <- switch(input$d2_alternative,
+                      "less"      = "<",
+                      "greater"   = ">",
+                      "two.sided" = "≠")
+    
+    h0 <- paste0("$p_1 - p_2 = ", input$d2_delta0, "$")
+    ha <- paste0("$p_1 - p_2 ", alt_str2, " ", input$d2_delta0, "$")
+    
+    delta_lab <- format(res$delta0, trim = TRUE)
+    
+    df <- data.frame(
+      label = c("$H_0$",
+                "$H_A$",
+                "$n_1$",
+                "$x_1$",
+                "$\\hat p_1$",
+                "$n_2$",
+                "$x_2$",
+                "$\\hat p_2$",
+                "$\\hat\\Delta$", 
+                "$z$",
+                "p‑value"),
+      value = c(h0,
+                ha,
+                res$n1, 
+                res$x1, 
+                round(res$p1,3),
+                res$n2,
+                res$x2, 
+                round(res$p2,3),
+                round(res$diff_hat,3),
+                round(res$z_stat, 3),
+                format(res$p_value, digits = 4))
+    )
+    df |>
+      gt() |>                 
+      fmt_markdown(columns = everything()) |>      
+      tab_header(title = "Two Proportion Test") |>
+      tab_options(column_labels.hidden = TRUE, 
+                  table.width = pct(100)) 
+  })
+  
+  output$d2_conclusions <- render_gt({
+    res <- d2_results()
+    alpha <- c(0.01,0.05,0.10)
+    decision <- ifelse(res$p_value < alpha, "**rejected**", "**not rejected**")
+    data.frame(
+      conclusions = paste0("The null hypothesis is ",
+                           decision, " at α = ", alpha)
+    ) |>
+      gt() |>
+      tab_header(title = "Test Conclusions") |>
+      tab_options(column_labels.hidden = TRUE,
+                  table.width = pct(100)) |>
+      fmt_markdown(columns = everything())
+  })
+  
+  d2_ci_gt <- reactive({
+    res <- d2_results()
+    data.frame(
+      label = c("Confidence level", "Interval"),
+      value = c(paste0(round(as.numeric(input$d2_conf_level)*100), "%"),
+                sprintf("[%.3f, %.3f]", res$ci[1], res$ci[2]))
+    ) |>
+      gt() |>
+      tab_header(title = "Confidence Interval") |>
+      tab_options(column_labels.hidden = TRUE,
+                  table.width = pct(100))
+  })
+  
+  output$d2_ci_table_side <- render_gt(
+    d2_ci_gt() |> 
+        tab_options(column_labels.hidden = TRUE,
+                    table.width = pct(100)))
+  
+  output$d2_ci_table_bottom <- render_gt(
+    d2_ci_gt() |> 
+      tab_options(column_labels.hidden = TRUE,
+                  table.width = pct(100))
+  )
   
   
-  
+  ## ────────────────────────────────────────────────────────────────────
+  ##  3.  Dual‑PMF plot
+  ## ────────────────────────────────────────────────────────────────────
+  output$d2_plot <- renderPlot({
+    if (!input$d2_show_test && !input$d2_show_ci) {
+      plot.new(); text(0.5,0.5,"No test or CI selected", cex = 1.4)
+      return()
+    }
+    
+    res <- d2_results()
+    x1 <- 0:res$n1;  x2 <- 0:res$n2
+    p1 <- dbinom(x1, res$n1, res$p1)
+    p2 <- dbinom(x2, res$n2, res$p2)
+    
+    ylim <- c(0, 1.1*max(c(p1,p2)))
+    barplot(p1, names.arg = x1, col = "lightgrey", border="black",
+            space = 0.2, ylim = ylim,
+            xlab = "Number of Successes (x)",
+            ylab = "Probability",
+            main = "Sampling Distributions Under Null Hypothesis")
+    
+    barplot(p2, names.arg = x2, col = "#6BB6FF", border="black",
+            space = 0.2, add = TRUE, axes = FALSE)
+    
+    legend("topright", inset = 0.02,
+           legend = c("Group 1","Group 2"),
+           fill   = c("lightgrey","#6BB6FF"),
+           bty = "n", cex = 0.9)
+  })
   
   # ======================================================================
   # TAB 4: Difference Two Means
