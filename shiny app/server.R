@@ -794,18 +794,232 @@ server <- function(input, output, session) {
     }
   })
   
-  
-  
-  
-
-  
-
-  
   # ======================================================================
   # TAB 6: t-Distribution
   # ======================================================================
 
-
+  t_debounced_num1 <- debounce(reactive(input$t_num1), 300)
+  t_debounced_num2 <- debounce(reactive(input$t_num2), 300)
+  
+  observe({
+    if (input$t_mode == "inverse" && input$t_range %in% c("between", "outside")) {
+      updateCheckboxInput(session, "t_symmetric", value = TRUE)
+    }
+  })
+  
+  t_thresholds <- reactiveValues(num1 = -2, num2 = 2)
+  t_threshold_locked_by_user <- reactiveVal(FALSE)
+  t_updating_thresholds <- reactiveVal(FALSE)
+  
+  observeEvent(t_debounced_num1(), {
+    if (t_updating_thresholds()) return()
+    isolate({
+      if (!is.null(t_debounced_num1()) && !is.na(t_debounced_num1())) {
+        if (input$t_mode == "inverse" && input$t_range %in% c("between", "outside") && !input$t_symmetric) {
+          if (input$t_known_side == "upper") {
+            t_thresholds$num2 <- t_debounced_num1()
+          } else {
+            t_thresholds$num1 <- t_debounced_num1()
+          }
+        } else {
+          t_thresholds$num1 <- t_debounced_num1()
+        }
+        t_threshold_locked_by_user(TRUE)
+      }
+    })
+  })
+  
+  observeEvent(t_debounced_num2(), {
+    if (t_updating_thresholds()) return()
+    isolate({
+      if (!is.null(t_debounced_num2()) && !is.na(t_debounced_num2())) {
+        t_thresholds$num2 <- t_debounced_num2()
+      }
+    })
+  }, ignoreInit = TRUE)
+  
+  output$t_dynamic_inputs <- renderUI({
+    if (input$t_mode == "t") {
+      if (input$t_range %in% c("between", "outside")) {
+        tagList(
+          numericInput("t_num1", "Lower Threshold", value = round(t_thresholds$num1, 4), step = 0.01),
+          numericInput("t_num2", "Upper Threshold", value = round(t_thresholds$num2, 4), step = 0.01)
+        )
+      } else {
+        numericInput("t_num1", "Threshold", value = round(t_thresholds$num1, 4), step = 0.01)
+      }
+    } else {
+      if (input$t_range %in% c("above", "below") || input$t_symmetric) return(NULL)
+      
+      tagList(
+        radioButtons("t_known_side", "Known Threshold Is:",
+                     choices = c("Lower" = "lower", "Upper" = "upper"),
+                     selected = "lower"),
+        uiOutput("t_single_input_ui")
+      )
+    }
+  })
+  
+  output$t_single_input_ui <- renderUI({
+    numericInput("t_num1",
+                 label = if (input$t_known_side == "lower") "Lower Threshold" else "Upper Threshold",
+                 value = if (input$t_known_side == "lower") round(t_thresholds$num1, 4) else round(t_thresholds$num2, 4),
+                 step = 0.01)
+  })
+  
+  calculate_t_asymmetric_thresholds <- function(known_side, known_value, prob_input, df, range_type) {
+    if (range_type == "between") {
+      if (known_side == "lower") {
+        p_lower <- pt(known_value, df)
+        target_upper <- prob_input + p_lower
+        if (target_upper <= 0 || target_upper >= 1) return(list(error = "Invalid probability or threshold input."))
+        computed <- qt(target_upper, df)
+        return(list(num1 = known_value, num2 = computed))
+      } else {
+        p_upper <- 1 - pt(known_value, df)
+        target_lower <- prob_input + p_upper
+        if (target_lower <= 0 || target_lower >= 1) return(list(error = "Invalid probability and threshold combination."))
+        computed <- qt(1 - target_lower, df)
+        return(list(num1 = computed, num2 = known_value))
+      }
+    } else if (range_type == "outside") {
+      if (known_side == "lower") {
+        p_lower <- pt(known_value, df)
+        target_upper <- prob_input - p_lower
+        if (target_upper <= 0 || target_upper >= 1) return(list(error = "Invalid combination."))
+        upper <- tryCatch({
+          uniroot(function(x) pt(x, df, lower.tail = FALSE) - target_upper,
+                  lower = 0, upper = 10)$root
+        }, error = function(e) NA)
+        if (is.na(upper)) return(list(error = "Could not solve for upper threshold."))
+        return(list(num1 = known_value, num2 = upper))
+      } else {
+        p_upper <- 1 - pt(known_value, df)
+        target_lower <- prob_input - p_upper
+        if (target_lower <= 0 || target_lower >= 1) return(list(error = "Invalid combination."))
+        lower <- tryCatch({
+          uniroot(function(x) pt(x, df) - target_lower,
+                  lower = -10, upper = 0)$root
+        }, error = function(e) NA)
+        if (is.na(lower)) return(list(error = "Could not solve for lower threshold."))
+        return(list(num1 = lower, num2 = known_value))
+      }
+    }
+    return(list(error = "Invalid range or threshold."))
+  }
+  
+  t_result <- reactive({
+    req(input$df, input$t_range, input$t_mode)
+    
+    df <- input$df
+    range_type <- input$t_range
+    mode <- input$t_mode
+    prob_input <- if (!is.null(input$t_prob_input)) as.numeric(input$t_prob_input) else NA
+    
+    num1 <- if (!is.null(t_debounced_num1())) as.numeric(t_debounced_num1()) else NA
+    num2 <- if (!is.null(t_debounced_num2())) as.numeric(t_debounced_num2()) else NA
+    
+    if (mode == "inverse") {
+      if (range_type == "below") {
+        num1 <- qt(prob_input, df)
+      } else if (range_type == "above") {
+        num1 <- qt(1 - prob_input, df)
+      } else if (input$t_symmetric && range_type %in% c("between", "outside")) {
+        tail_prob <- if (range_type == "between") (1 - prob_input) / 2 else prob_input / 2
+        dist <- qt(1 - tail_prob, df)
+        if (range_type == "between") {
+          num1 <- -dist
+          num2 <- dist
+        } else {
+          num1 <- qt(tail_prob, df)
+          num2 <- qt(1 - tail_prob, df)
+        }
+      } else {
+        if (!is.na(num1)) {
+          result <- calculate_t_asymmetric_thresholds(input$t_known_side, num1, prob_input, df, range_type)
+          if (!is.null(result$error)) return(list(error = result$error))
+          num1 <- result$num1
+          num2 <- result$num2
+          t_updating_thresholds(TRUE)
+          t_thresholds$num1 <- num1
+          t_thresholds$num2 <- num2
+          t_updating_thresholds(FALSE)
+        }
+      }
+    }
+    
+    x_vals <- seq(-5, 5, length.out = 1000)
+    y_vals <- dt(x_vals, df)
+    df_data <- data.frame(x = x_vals, y = y_vals)
+    
+    prob <- NA
+    error_msg <- NULL
+    shade_df <- data.frame(x = numeric(0), y = numeric(0))
+    
+    if (range_type == "above") {
+      prob <- pt(num1, df, lower.tail = FALSE)
+      shade_df <- df_data[df_data$x >= num1, ]
+    } else if (range_type == "below") {
+      prob <- pt(num1, df)
+      shade_df <- df_data[df_data$x <= num1, ]
+    } else if (range_type == "between") {
+      if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold."
+      else {
+        prob <- pt(num2, df) - pt(num1, df)
+        shade_df <- df_data[df_data$x >= num1 & df_data$x <= num2, ]
+      }
+    } else if (range_type == "outside") {
+      if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold."
+      else {
+        prob <- 1 - (pt(num2, df) - pt(num1, df))
+      }
+    }
+    
+    if (!is.null(error_msg)) return(list(error = error_msg))
+    
+    list(prob = prob, data = df_data, shaded = shade_df, num1 = num1, num2 = num2)
+  })
+  
+  output$t_prob <- renderText({
+    res <- t_result()
+    if (!is.null(res$error)) return(res$error)
+    paste0("Probability = ", round(res$prob, 4))
+  })
+  
+  output$t_threshold_text <- renderText({
+    res <- t_result()
+    if (!is.null(res$error)) return("")
+    if (input$t_range == "above") {
+      paste0("Threshold: Above ", round(res$num1, 4))
+    } else if (input$t_range == "below") {
+      paste0("Threshold: Below ", round(res$num1, 4))
+    } else if (input$t_range == "between") {
+      paste0("Threshold: Between ", round(res$num1, 4), " and ", round(res$num2, 4))
+    } else if (input$t_range == "outside") {
+      paste0("Threshold: Outside ", round(res$num1, 4), " and ", round(res$num2, 4))
+    }
+  })
+  
+  output$t_plot <- renderPlot({
+    res <- t_result()
+    if (!is.null(res$error)) return(NULL)
+    
+    base_plot <- ggplot(res$data, aes(x, y)) +
+      geom_line(color = "blue") +
+      labs(title = "t-Distribution", x = "X", y = "Density") +
+      theme_minimal()
+    
+    if (input$t_range == "outside") {
+      left <- subset(res$data, x <= res$num1)
+      right <- subset(res$data, x >= res$num2)
+      base_plot +
+        geom_area(data = left, aes(x, y), fill = "lightblue", alpha = 0.5) +
+        geom_area(data = right, aes(x, y), fill = "lightblue", alpha = 0.5)
+    } else {
+      base_plot +
+        geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
+    }
+  })
 
   # ======================================================================
   # TAB 7: Chi-square
