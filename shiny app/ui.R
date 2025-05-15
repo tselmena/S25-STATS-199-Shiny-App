@@ -6,7 +6,7 @@ ui <- fluidPage(
   theme = shinytheme("flatly"),
   
   # title
-  titlePanel("UCLA Intro Stats Calculator"),
+  titlePanel("UCLA Stats Calculator"),
   
   tabsetPanel(
     # ======================================================================
@@ -201,7 +201,61 @@ ui <- fluidPage(
       )
     ),
  
-    
+    # ======================================================================
+    # TAB 6: t-Distribution
+    # ======================================================================
+
+    tabPanel(
+      "t-Distribution",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("t_mode", "Select Mode:", 
+                      choices = c("Distribution Calculator" = "t", 
+                                  "Inverse Calculator" = "inverse")),
+          
+          numericInput("df", "Degrees of Freedom", value = 10, step = 1, min = 1),
+          
+          radioButtons(
+            inputId = "t_range",
+            label = "Select Range:",
+            choices = c("Above" = "above", "Below" = "below", 
+                        "Between" = "between", "Outside" = "outside"),
+            selected = "between"
+          ),
+          
+          conditionalPanel(
+            condition = "input.t_mode == 'inverse' && (input.t_range == 'between' || input.t_range == 'outside')",
+            checkboxInput("t_symmetric", "Symmetric Thresholds", value = TRUE)
+          ),
+          
+          uiOutput("t_dynamic_inputs"),
+          
+          conditionalPanel(
+            condition = "input.t_mode == 'inverse' && (input.t_range == 'between' || input.t_range == 'outside')",
+            numericInput("t_prob_input", "Desired Probability", value = 0.95, step = 0.01)
+          ),
+          
+          conditionalPanel(
+            condition = "input.t_mode == 'inverse' && input.t_range != 'between' && input.t_range != 'outside'",
+            numericInput("t_prob_input", "Probability", value = 0.95, step = 0.01)
+          ),
+          
+          conditionalPanel(
+            condition = "input.t_mode == 'inverse' && input.t_range != 'between' && input.t_range != 'outside'",
+            radioButtons("t_known_side", "Known Threshold Is:",
+                         choices = c("Lower" = "lower", "Upper" = "upper"),
+                         selected = "lower")
+          )
+        ),
+        
+        mainPanel(
+          textOutput("t_prob"),
+          textOutput("t_threshold_text"),
+          plotOutput("t_plot")
+        )
+      )
+    ),
+
     # ======================================================================
     # TAB 7: Chi-square Distribution
     # ======================================================================
