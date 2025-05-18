@@ -1024,7 +1024,93 @@ server <- function(input, output, session) {
   # ======================================================================
   # TAB 7: Chi-square
   # ======================================================================
-
+  chisq_debounced_num1 <- debounce(reactive(input$chisq_num1), 300)
+  
+  chisq_threshold <- reactiveValues(num1 = 2)
+  chisq_threshold_locked_by_user <- reactiveVal(FALSE)
+  
+  observeEvent(chisq_debounced_num1(), {
+    if (!is.null(chisq_debounced_num1()) && !is.na(chisq_debounced_num1())) {
+      chisq_threshold$num1 <- chisq_debounced_num1()
+      chisq_threshold_locked_by_user(TRUE)
+    }
+  })
+  
+  output$chisq_dynamic_inputs <- renderUI({
+    numericInput(
+      "chisq_num1",
+      "Threshold",
+      value = round(chisq_threshold$num1, 4),
+      step = 0.01
+    )
+  })
+  
+  chisq_result <- reactive({
+    req(input$chisq_df, input$chisq_range, input$chisq_mode)
+    
+    df <- input$chisq_df
+    range_type <- input$chisq_range
+    mode <- input$chisq_mode
+    prob_input <- if (!is.null(input$chisq_prob_input)) as.numeric(input$chisq_prob_input) else NA
+    num1 <- if (mode == "chisq") {
+      if (!is.null(chisq_debounced_num1())) as.numeric(chisq_debounced_num1()) else NA
+    } else {
+      if (is.na(prob_input)) return(NULL)
+      if (range_type == "below") {
+        qchisq(prob_input, df)
+      } else {
+        qchisq(1 - prob_input, df)
+      }
+    }
+    
+    if (mode == "inverse" && !is.na(num1)) {
+      chisq_threshold$num1 <- num1
+    }
+    
+    x_vals <- seq(0, qchisq(0.999, df), length.out = 1000)
+    y_vals <- dchisq(x_vals, df)
+    df_data <- data.frame(x = x_vals, y = y_vals)
+    
+    prob <- NA
+    shade_df <- data.frame(x = numeric(0), y = numeric(0))
+    
+    if (range_type == "above") {
+      prob <- pchisq(num1, df, lower.tail = FALSE)
+      shade_df <- df_data[df_data$x >= num1, ]
+    } else if (range_type == "below") {
+      prob <- pchisq(num1, df)
+      shade_df <- df_data[df_data$x <= num1, ]
+    }
+    
+    list(prob = prob, data = df_data, shaded = shade_df, num1 = num1)
+  })
+  
+  output$chisq_prob <- renderText({
+    res <- chisq_result()
+    if (is.null(res)) return("Invalid input.")
+    paste0("Probability = ", round(res$prob, 4))
+  })
+  
+  output$chisq_threshold_text <- renderText({
+    res <- chisq_result()
+    if (is.null(res)) return("")
+    if (input$chisq_range == "above") {
+      paste0("Threshold: Above ", round(res$num1, 4))
+    } else {
+      paste0("Threshold: Below ", round(res$num1, 4))
+    }
+  })
+  
+  output$chisq_plot <- renderPlot({
+    res <- chisq_result()
+    if (is.null(res)) return(NULL)
+    
+    ggplot(res$data, aes(x, y)) +
+      geom_line(color = "blue") +
+      labs(title = "Chi-square Distribution", x = "X", y = "Density") +
+      theme_minimal() +
+      geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
+  })
 }
 
 

@@ -407,15 +407,35 @@ ui <- fluidPage(
     
     tabPanel(
       "Chi-square",
-      sidebarLayout(sidebarPanel(
-        
-        # insert content here
-        
-        ), 
-      mainPanel(
-        
-        # insert content here
-        
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("chisq_mode", "Select Mode:", 
+                      choices = c("Distribution Calculator" = "chisq", 
+                                  "Inverse Calculator" = "inverse")),
+          
+          numericInput("chisq_df", "Degrees of Freedom", value = 1, min = 1, step = 1),
+          
+          # Show range selection in both modes
+          radioButtons("chisq_range", "Select Range:",
+                       choices = c("Above" = "above", "Below" = "below"),
+                       selected = "below"),
+          
+          # Only show threshold input in distribution mode
+          conditionalPanel(
+            condition = "input.chisq_mode == 'chisq'",
+            uiOutput("chisq_dynamic_inputs")
+          ),
+          
+          # Only show desired probability input in inverse mode
+          conditionalPanel(
+            condition = "input.chisq_mode == 'inverse'",
+            numericInput("chisq_prob_input", "Desired Probability", value = 0.95, step = 0.01)
+          )
+        ),
+        mainPanel(
+          textOutput("chisq_prob"),
+          textOutput("chisq_threshold_text"),
+          plotOutput("chisq_plot")
         )
       )
     ),
