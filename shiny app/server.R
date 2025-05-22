@@ -807,7 +807,7 @@ server <- function(input, output, session) {
     }
   })
   
-  t_thresholds <- reactiveValues(num1 = -2, num2 = 2)
+  t_thresholds <- reactiveValues(num1 = -1.96, num2 = 1.96)
   t_threshold_locked_by_user <- reactiveVal(FALSE)
   t_updating_thresholds <- reactiveVal(FALSE)
   
@@ -1006,7 +1006,10 @@ server <- function(input, output, session) {
     
     base_plot <- ggplot(res$data, aes(x, y)) +
       geom_line(color = "blue") +
-      labs(title = "t-Distribution", x = "X", y = "Density") +
+      # Add the standard normal curve
+      stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
+                    aes(x = x), color = "purple", linetype = "dashed") +
+      labs(title = "t-Distribution with Standard Normal Overlay", x = "X", y = "Density") +
       theme_minimal()
     
     if (input$t_range == "outside") {
