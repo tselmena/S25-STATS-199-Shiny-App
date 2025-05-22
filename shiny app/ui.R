@@ -73,9 +73,9 @@ ui <- fluidPage(
                    condition = "input.show_test == true",
                    splitLayout(
                      cellWidths = c("30%", "55%"),
-                     cellArgs   = list(style = "padding:0; margin:0; vertical-align:top;"),
+                     cellArgs = list(style = "padding:0; margin:0; vertical-align:top;"),
                      
-                     # left  column
+                     # left column
                      div(gt_output("results_table")),
                      
                      # right column: conclusions + CI
@@ -109,10 +109,9 @@ ui <- fluidPage(
       "One Mean",
       sidebarLayout(
         sidebarPanel(
-          checkboxInput("mean_show_ci",   "Confidence Interval", TRUE),
-          checkboxInput("mean_show_test", "Test",                 TRUE),
-          
-          ## confidence level
+          checkboxInput("mean_show_ci", "Confidence Interval", TRUE),
+          checkboxInput("mean_show_test", "Test", TRUE),
+          # confidence level
           conditionalPanel(
             condition = "input.mean_show_ci == true",
             selectInput("mean_conf_level", "Confidence Level:",
@@ -120,7 +119,7 @@ ui <- fluidPage(
                         selected = 0.95)
           ),
           
-          ## alternative
+          # alternative
           conditionalPanel(
             condition = "input.mean_show_test == true",
             radioButtons("mean_alt", "Select the type of test:",
@@ -131,16 +130,15 @@ ui <- fluidPage(
           ),
           
           ## numeric inputs
-          numericInput("mean_mu0",  "Hypothesised mean (μ₀)",   value = 100),
-          numericInput("mean_n",    "Sample size (n)",          value = 30, step = 1),
-          numericInput("mean_xbar", "Sample mean (x̄)",         value = 98),
-          numericInput("mean_s",    "Sample SD (s)",            value = 6)
+          numericInput("mean_mu0", "Hypothesised mean (μ₀)", value = 0),
+          numericInput("mean_n", "Sample size (n)", value = 30, step = 1),
+          numericInput("mean_xbar", "Sample mean(x̄)", value = .10),
+          numericInput("mean_s", "Sample SD (s)", value = 1)
         ),
         
         mainPanel(
           plotOutput("mean_plot"),
-          
-          ## TEST ON  → two‑column layout
+          # TEST ON 
           conditionalPanel(
             condition = "input.mean_show_test == true",
             splitLayout(
@@ -157,7 +155,7 @@ ui <- fluidPage(
             )
           ),
           
-          ## TEST OFF & CI ON  → CI below plot
+          # TEST OFF & CI ON 
           conditionalPanel(
             condition = "input.mean_show_test == false && input.mean_show_ci == true",
             div(style="margin-top:25px;width:fit-content;",
@@ -175,19 +173,16 @@ ui <- fluidPage(
       "Difference Two Proportion",
       sidebarLayout(
         sidebarPanel(
-          ### same master switches ----------------------------------------
-          checkboxInput("d2_show_ci",   "Confidence Interval", TRUE),
-          checkboxInput("d2_show_test", "Test",                 TRUE),
+          checkboxInput("d2_show_ci", "Confidence Interval", TRUE),
+          checkboxInput("d2_show_test", "Test", TRUE),
           
-          ### confidence level selector -----------------------------------
           conditionalPanel(
             condition = "input.d2_show_ci == true",
             selectInput("d2_conf_level", "Confidence Level:",
                         choices  = c("90%" = 0.90, "95%" = 0.95, "99%" = 0.99),
                         selected = 0.95)
           ),
-          
-          ### alternative hypotheses -------------------------------------
+        
           conditionalPanel(
             condition = "input.d2_show_test == true",
             radioButtons("d2_alternative", "Select the type of test:",
@@ -196,16 +191,10 @@ ui <- fluidPage(
                                      "Right-tailed" = "greater"),
                          selected = "two.sided")
           ),
-          
-          ### hypothesised difference Δ₀ (keep 0 for intro‑stats courses)
-          numericInput("d2_delta0",
-                       HTML("Hypothesised difference&nbsp;(Δ<sub>0</sub>)"), 0,
-                       step = 0.01),
-          
-          ### group 1 inputs ---------------------------------------------
+    
           tags$hr(),
           tags$strong("Group 1"),
-          numericInput("d2_n1",   "Sample size (n₁)", 30,  step = 1),
+          numericInput("d2_n1", "Sample size (n₁)", 30,  step = 1),
           
           conditionalPanel(
             condition = "input.d2_use_successes1 == false",
@@ -217,11 +206,13 @@ ui <- fluidPage(
             condition = "input.d2_use_successes1 == true",
             numericInput("d2_x1", "Number of successes (x₁)", 18, step = 1)
           ),
-          
-          ### group 2 inputs ---------------------------------------------
+      
+          checkboxInput("d2_use_successes1",
+                        "Use first number of successes instead", FALSE),
+
           tags$hr(),
           tags$strong("Group 2"),
-          numericInput("d2_n2",   "Sample size (n₂)", 40,  step = 1),
+          numericInput("d2_n2", "Sample size (n₂)", 40,  step = 1),
           conditionalPanel(
             condition = "input.d2_use_successes2 == false",
             numericInput("d2_p2hat", HTML("Sample proportion (p&#770;<sub>2</sub>)"),
@@ -231,25 +222,19 @@ ui <- fluidPage(
             condition = "input.d2_use_successes2 == true",
             numericInput("d2_x2", "Number of successes (x₂)", 22, step = 1)
           ),
-          
-          ### common toggle ----------------------------------------------
-          checkboxInput("d2_use_successes1",
-                        "Use first number of successes instead", FALSE),
-          
           checkboxInput("d2_use_successes2",
                         "Use second number of successes instead", FALSE)
         ),
         
-        ### right‑hand side: plot + tables (same layout) -----------------
+        # main: plot and tables
         mainPanel(
-          plotOutput("d2_plot"),
-          
-          ## two‑column only when the test box is on
+          plotOutput("d2_zplot"),
+          # two‑column only when the test box is on
           conditionalPanel(
             condition = "input.d2_show_test == true",
             splitLayout(
               cellWidths = c("30%", "55%"),
-              cellArgs   = list(style="padding:0;margin:0;vertical-align:top;"),
+              cellArgs = list(style="padding:0;margin:0;vertical-align:top;"),
               div(gt_output("d2_results_table")),
               div(style = "margin-left:20px;display:flex;flex-direction:column;row-gap:0px;",
                   gt_output("d2_conclusions"),
@@ -261,7 +246,6 @@ ui <- fluidPage(
             )
           ),
           
-          ## if CI is on but test is off, put CI below the plot
           conditionalPanel(
             condition = "input.d2_show_test == false && input.d2_show_ci == true",
             div(style="margin-top:25px;width:fit-content;",
@@ -397,15 +381,35 @@ ui <- fluidPage(
     
     tabPanel(
       "Chi-square",
-      sidebarLayout(sidebarPanel(
-        
-        # insert content here
-        
-        ), 
-      mainPanel(
-        
-        # insert content here
-        
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("chisq_mode", "Select Mode:", 
+                      choices = c("Distribution Calculator" = "chisq", 
+                                  "Inverse Calculator" = "inverse")),
+          
+          numericInput("chisq_df", "Degrees of Freedom", value = 1, min = 1, step = 1),
+          
+          # Show range selection in both modes
+          radioButtons("chisq_range", "Select Range:",
+                       choices = c("Above" = "above", "Below" = "below"),
+                       selected = "below"),
+          
+          # Only show threshold input in distribution mode
+          conditionalPanel(
+            condition = "input.chisq_mode == 'chisq'",
+            uiOutput("chisq_dynamic_inputs")
+          ),
+          
+          # Only show desired probability input in inverse mode
+          conditionalPanel(
+            condition = "input.chisq_mode == 'inverse'",
+            numericInput("chisq_prob_input", "Desired Probability", value = 0.95, step = 0.01)
+          )
+        ),
+        mainPanel(
+          textOutput("chisq_prob"),
+          textOutput("chisq_threshold_text"),
+          plotOutput("chisq_plot")
         )
       )
     ),
