@@ -1061,14 +1061,23 @@ server <- function(input, output, session) {
   # ======================================================================
   
   url <- a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App")
-  output$tab <-renderUI({
+  output$repository_link <- renderUI({
     tags$a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App", "https://github.com/tselmena/S25-STATS-199-Shiny-App")
+  })
+  
+  output$html_text <- renderUI({
+    tag0 <- p("")
+    tag1 <- p("BibTeX:")
+    tag2 <- p("@misc{UCLA Stats Calculator,")
+    tag3 <- p("title = {UCLA Stats Calculator},", style = "text-indent: 1em;")
+    tag4 <- p("author = {Tselmen Anuurad, Claudia Chan, Hayley Labia, Thomas Maierhofer},", style = "text-indent: 1em;")
+    tag5 <- p("year = {2025},", style = "text-indent: 1em;")
+    tag6 <- p("version = {1.0},", style = "text-indent: 1em;")
+    tag7 <- p("howpublished = {https://github.com/tselmena/S25-STATS-199-Shiny-App},", style = "text-indent: 1em;")
+    tag8 <- p("note = {R Shiny application developed at UCLA; all authors contributed equally; supervised by Professor Thomas Maierhofer}", style = "text-indent: 1em")
+    tag9 <- p("}")
+    
+    HTML(paste(tag0, tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, sep = "<br>"))
   })
 
 }
-
-
-
-
-
-
