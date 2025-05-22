@@ -967,6 +967,7 @@ server <- function(input, output, session) {
   # ======================================================================
   # TAB 7: Chi-square
   # ======================================================================
+
   chisq_debounced_num1 <- debounce(reactive(input$chisq_num1), 300)
   
   chisq_threshold <- reactiveValues(num1 = 2)
@@ -1054,17 +1055,17 @@ server <- function(input, output, session) {
       theme_minimal() +
       geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
   })
+  
+  # ======================================================================
+  # TAB 8: Citation
+  # ======================================================================
+  
+  url <- a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App")
+  output$tab <-renderUI({
+    tags$a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App", "https://github.com/tselmena/S25-STATS-199-Shiny-App")
+  })
+
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
