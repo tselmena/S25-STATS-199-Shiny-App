@@ -421,9 +421,11 @@ ui <- fluidPage(
     tabPanel(
       "Citation",
       mainPanel(
-        paste("Anuurad, T., Chan, C., Labia, H., Maierhofer, T. (2025). UCLA Stats Calculator (Version 1.0) [Computer software]."),
+        paste("APA: Anuurad, T., Chan, C., Labia, H., Maierhofer, T. (2025). UCLA Stats Calculator (Version 1.0) [Computer software]."),
         
-        uiOutput("tab"),
+        uiOutput("repository_link"),
+        
+        htmlOutput("html_text")
         
         )
       )
