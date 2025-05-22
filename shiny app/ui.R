@@ -390,7 +390,7 @@ ui <- fluidPage(
     # ======================================================================
     
     tabPanel(
-      "Chi-square",
+      "Chi-square Distribution",
       sidebarLayout(sidebarPanel(
         
         # insert content here
