@@ -1034,20 +1034,15 @@ server <- function(input, output, session) {
   # TAB 7: Chi-square
   # ======================================================================
 
+  
+  # ======================================================================
+  # TAB 8: Citation
+  # ======================================================================
+  
+  url <- a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App")
+  output$tab <-renderUI({
+    tags$a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App", "https://github.com/tselmena/S25-STATS-199-Shiny-App")
+  })
+  
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

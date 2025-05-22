@@ -411,14 +411,15 @@ ui <- fluidPage(
     ),
     
     # ======================================================================
-    # TAB 7: Citation
+    # TAB 8: Citation
     # ======================================================================
     
     tabPanel(
       "Citation",
       mainPanel(
+        paste("Anuurad, T., Chan, C., Labia, H., Maierhofer, T. (2025). UCLA Stats Calculator (Version 1.0) [Computer software]."),
         
-        paste("Anuurad, T., Chan, C., Labia, H., Maierhofer, T. (2025). UCLA Stats Calculator (Version 1.0) [Computer software]. https://github.com/tselmena/S25-STATS-199-Shiny-App")
+        uiOutput("tab"),
         
         )
       )
