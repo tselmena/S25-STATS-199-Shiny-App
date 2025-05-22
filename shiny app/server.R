@@ -939,12 +939,26 @@ server <- function(input, output, session) {
     if (!is.null(res$error)) return(NULL)
     
     base_plot <- ggplot(res$data, aes(x, y)) +
+<<<<<<< HEAD
       geom_line(color = "#2774AE") +
       # Add the standard normal curve
       stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
                     aes(x = x), color = "darkgrey", linetype = "dashed") +
       labs(title = "t-Distribution with Standard Normal Overlay", x = "X", y = "Density") +
+=======
+      geom_line(color = "blue") +
+      labs(title = "t-Distribution", x = "X", y = "Density") +
+>>>>>>> 19199692cb35f2e5d8ea2b4b5d1433b97e65fa68
       theme_minimal()
+    
+    if (input$show_normal_overlay) {
+      normal_df <- data.frame(
+        x = res$data$x,
+        y = dnorm(res$data$x)
+      )
+    base_plot <- base_plot +
+      geom_line(data = normal_df, aes(x, y), color = "purple", linetype = "dashed")
+    }
     
     if (input$t_range == "outside") {
       left <- subset(res$data, x <= res$num1)
@@ -961,6 +975,7 @@ server <- function(input, output, session) {
   # ======================================================================
   # TAB 7: Chi-square
   # ======================================================================
+
   chisq_debounced_num1 <- debounce(reactive(input$chisq_num1), 300)
   
   chisq_threshold <- reactiveValues(num1 = 2)
@@ -1048,19 +1063,14 @@ server <- function(input, output, session) {
       theme_minimal() +
       geom_area(data = res$shaded, aes(x, y), fill = "#2774AE", alpha = 0.5)
   })
+  
+  # ======================================================================
+  # TAB 8: Citation
+  # ======================================================================
+  
+  url <- a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App")
+  output$tab <-renderUI({
+    tags$a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App", "https://github.com/tselmena/S25-STATS-199-Shiny-App")
+  })
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
