@@ -939,16 +939,8 @@ server <- function(input, output, session) {
     if (!is.null(res$error)) return(NULL)
     
     base_plot <- ggplot(res$data, aes(x, y)) +
-<<<<<<< HEAD
-      geom_line(color = "#2774AE") +
-      # Add the standard normal curve
-      stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
-                    aes(x = x), color = "darkgrey", linetype = "dashed") +
-      labs(title = "t-Distribution with Standard Normal Overlay", x = "X", y = "Density") +
-=======
       geom_line(color = "blue") +
       labs(title = "t-Distribution", x = "X", y = "Density") +
->>>>>>> 19199692cb35f2e5d8ea2b4b5d1433b97e65fa68
       theme_minimal()
     
     if (input$show_normal_overlay) {
