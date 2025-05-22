@@ -421,9 +421,18 @@ ui <- fluidPage(
     tabPanel(
       "Citation",
       mainPanel(
-        paste("Anuurad, T., Chan, C., Labia, H., Maierhofer, T. (2025). UCLA Stats Calculator (Version 1.0) [Computer software]."),
+        paste("APA: Anuurad, T., Chan, C., Labia, H., Maierhofer, T. (2025). UCLA Stats Calculator (Version 1.0) [Computer software]."),
         
         uiOutput("tab"),
+        
+        paste("@misc{UCLA Stats Calculator,
+                title = {UCLA Stats Calculator},
+                author = {Tselmen Anuurad, Claudia Chan, Hayley Labia, Thomas Maierhofer},
+                year = {2025},
+                version = {1.0},
+                howpublished = {https://github.com/tselmena/S25-STATS-199-Shiny-App},
+                note = {R Shiny application developed at UCLA; all authors contributed equally; supervised by Professor Thomas Maierhofer}
+              }")
         
         )
       )
