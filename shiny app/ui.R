@@ -330,12 +330,6 @@ ui <- fluidPage(
             numericInput("prob_input", "Probability", value = 0.95, step = 0.01)
           ),
           
-          conditionalPanel(
-            condition = "input.mode == 'inverse' && input.range != 'between' && input.range != 'outside'",
-            radioButtons("known_side", "Known Threshold Is:",
-                         choices = c("Lower" = "lower", "Upper" = "upper"),
-                         selected = "lower")
-          )
         ),
         
         mainPanel(
@@ -358,7 +352,7 @@ ui <- fluidPage(
                       choices = c("Distribution Calculator" = "t", 
                                   "Inverse Calculator" = "inverse")),
           
-          numericInput("df", "Degrees of Freedom", value = 10, step = 1, min = 1),
+          numericInput("df", "Degrees of Freedom (n - 1)", value = 29, step = 1, min = 1),
           
           radioButtons(
             inputId = "t_range",
@@ -385,12 +379,6 @@ ui <- fluidPage(
             numericInput("t_prob_input", "Probability", value = 0.95, step = 0.01)
           ),
           
-          conditionalPanel(
-            condition = "input.t_mode == 'inverse' && input.t_range != 'between' && input.t_range != 'outside'",
-            radioButtons("t_known_side", "Known Threshold Is:",
-                         choices = c("Lower" = "lower", "Upper" = "upper"),
-                         selected = "lower")
-          )
         ),
         
         mainPanel(
