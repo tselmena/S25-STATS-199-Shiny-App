@@ -1006,11 +1006,17 @@ server <- function(input, output, session) {
     
     base_plot <- ggplot(res$data, aes(x, y)) +
       geom_line(color = "blue") +
-      # Add the standard normal curve
-      stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
-                    aes(x = x), color = "purple", linetype = "dashed") +
-      labs(title = "t-Distribution with Standard Normal Overlay", x = "X", y = "Density") +
+      labs(title = "t-Distribution", x = "X", y = "Density") +
       theme_minimal()
+    
+    if (input$show_normal_overlay) {
+      normal_df <- data.frame(
+        x = res$data$x,
+        y = dnorm(res$data$x)
+      )
+    base_plot <- base_plot +
+      geom_line(data = normal_df, aes(x, y), color = "purple", linetype = "dashed")
+    }
     
     if (input$t_range == "outside") {
       left <- subset(res$data, x <= res$num1)
