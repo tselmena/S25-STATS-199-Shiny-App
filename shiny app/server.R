@@ -778,7 +778,7 @@ server <- function(input, output, session) {
     if (!is.null(res$error)) return(NULL)
     
     base_plot <- ggplot(res$data, aes(x, y)) +
-      geom_line(color = "blue") +
+      geom_line(color = "#2774AE") +
       labs(title = "Normal Distribution", x = "X", y = "Density") +
       theme_minimal()
     
@@ -786,11 +786,11 @@ server <- function(input, output, session) {
       left <- subset(res$data, x <= res$num1)
       right <- subset(res$data, x >= res$num2)
       base_plot +
-        geom_area(data = left, aes(x, y), fill = "lightblue", alpha = 0.5) +
-        geom_area(data = right, aes(x, y), fill = "lightblue", alpha = 0.5)
+        geom_area(data = left, aes(x, y), fill = "#2774AE", alpha = 0.5) +
+        geom_area(data = right, aes(x, y), fill = "#2774AE", alpha = 0.5)
     } else {
       base_plot +
-        geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
+        geom_area(data = res$shaded, aes(x, y), fill = "#2774AE", alpha = 0.5)
     }
   })
   
@@ -1005,10 +1005,10 @@ server <- function(input, output, session) {
     if (!is.null(res$error)) return(NULL)
     
     base_plot <- ggplot(res$data, aes(x, y)) +
-      geom_line(color = "blue") +
+      geom_line(color = "#2774AE") +
       # Add the standard normal curve
       stat_function(fun = dnorm, args = list(mean = 0, sd = 1), 
-                    aes(x = x), color = "purple", linetype = "dashed") +
+                    aes(x = x), color = "darkgrey", linetype = "dashed") +
       labs(title = "t-Distribution with Standard Normal Overlay", x = "X", y = "Density") +
       theme_minimal()
     
@@ -1016,11 +1016,11 @@ server <- function(input, output, session) {
       left <- subset(res$data, x <= res$num1)
       right <- subset(res$data, x >= res$num2)
       base_plot +
-        geom_area(data = left, aes(x, y), fill = "lightblue", alpha = 0.5) +
-        geom_area(data = right, aes(x, y), fill = "lightblue", alpha = 0.5)
+        geom_area(data = left, aes(x, y), fill = "#2774AE", alpha = 0.5) +
+        geom_area(data = right, aes(x, y), fill = "#2774AE", alpha = 0.5)
     } else {
       base_plot +
-        geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
+        geom_area(data = res$shaded, aes(x, y), fill = "#2774AE", alpha = 0.5)
     }
   })
 
@@ -1109,13 +1109,12 @@ server <- function(input, output, session) {
     if (is.null(res)) return(NULL)
     
     ggplot(res$data, aes(x, y)) +
-      geom_line(color = "blue") +
+      geom_line(color = "#2774AE") +
       labs(title = "Chi-square Distribution", x = "X", y = "Density") +
       theme_minimal() +
-      geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
+      geom_area(data = res$shaded, aes(x, y), fill = "#2774AE", alpha = 0.5)
   })
 }
-
 
 
 
