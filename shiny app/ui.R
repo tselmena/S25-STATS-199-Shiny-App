@@ -7,7 +7,13 @@ ui <- fluidPage(
   
   mathjax = TRUE,
   # title
-  titlePanel("UCLA Stats Calculator"),
+  titlePanel(
+    windowTitle = "UCLA Stats Calculator",
+    title = tags$head(tags$link(rel = "icon",
+                                href="https://ucla.evenue.net/www/ev_ucla-multi/ss/evenue/customize/ev_ucla-multi/images/desktop/favicon.png"
+                                )
+                      )
+  ),
   
   tabsetPanel(
     # ======================================================================
