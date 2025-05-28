@@ -1060,7 +1060,11 @@ server <- function(input, output, session) {
   # TAB 8: Citation
   # ======================================================================
   
-  url <- a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App")
+  output$space <- renderUI({
+    insert_space <- p("")
+    HTML(paste(insert_space))
+  })
+  
   output$repository_link <- renderUI({
     tags$a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App", "https://github.com/tselmena/S25-STATS-199-Shiny-App")
   })
@@ -1078,6 +1082,12 @@ server <- function(input, output, session) {
     tag9 <- p("}")
     
     HTML(paste(tag0, tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, sep = "<br>"))
+  })
+  
+  license <- "License: GPL-3.0-or-later"
+  license_url <-a(href = "https://www.gnu.org/licenses/gpl-3.0.txt")
+  output$license_link <- renderUI({
+    tags$a(href = "https://www.gnu.org/licenses/gpl-3.0.txt", license)
   })
 
 }
