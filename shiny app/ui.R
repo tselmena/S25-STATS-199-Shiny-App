@@ -12,7 +12,7 @@ ui <- fluidPage(
   titlePanel(
     windowTitle = "UCLA Stats Calculator",
     title = tags$head(tags$link(rel = "icon",
-                                href="https://ucla.evenue.net/www/ev_ucla-multi/ss/evenue/customize/ev_ucla-multi/images/desktop/favicon.png"
+                                href="https://statistics.ucla.edu/wp-content/uploads/2023/08/cropped-cropped-ucla-logo-square-32x32.jpeg"
                                 )
                       )
   ),
