@@ -149,7 +149,7 @@ server <- function(input, output, session) {
         alpha <- c(0.01, 0.05, 0.1)
         decisions <- ifelse(p_value < alpha, "**rejected**", "**not rejected**")
         df <- data.frame(
-          conclusions = paste0("The null hypothesis is ", decisions, " at \u03B1 = ", alpha)
+          conclusions = paste0("The null hypothesis is ", decisions, " at $\\alpha = $ ", alpha)
         )
         
         df |> 
@@ -275,7 +275,7 @@ server <- function(input, output, session) {
     dec <- ifelse(res$p_value < alpha, "**rejected**", "**not rejected**")
 
     data.frame(
-      conclusions = paste0("The null hypothesis is ", dec, " at α = ", alpha)
+      conclusions = paste0("The null hypothesis is ", dec, " at $\\alpha = $ ", alpha)
     ) |>
       gt() |>
       tab_header(title = "Test Conclusions") |>
@@ -418,7 +418,7 @@ server <- function(input, output, session) {
     alpha <- c(0.01, 0.05, 0.10)
     decision <- ifelse(res$p_value < alpha, "**rejected**", "**not rejected**")
     data.frame(
-      conclusions = paste0("The null hypothesis is ", decision, " at α = ", alpha)
+      conclusions = paste0("The null hypothesis is ", decision, " at $\\alpha = $ ", alpha)
     ) |>
       gt() |>
       tab_header(title = "Test Conclusions") |>
@@ -496,7 +496,163 @@ server <- function(input, output, session) {
   # TAB 4: Difference Two Means
   # ======================================================================
   
+  d2m_results <- reactive({
+    n1    <- input$d2m_n1
+    xbar1 <- input$d2m_xbar1
+    s1    <- input$d2m_s1
+    n2    <- input$d2m_n2
+    xbar2 <- input$d2m_xbar2
+    s2    <- input$d2m_s2
+    delta0 <- 0
+    conf_level <- as.numeric(input$d2m_conf_level)
+    
+    validate(
+      need(n1 >= 2, "Sample size n₁ must be ≥ 2."),
+      need(n2 >= 2, "Sample size n₂ must be ≥ 2."),
+      need(s1 > 0, "Sample SD s₁ must be > 0."),
+      need(s2 > 0, "Sample SD s₂ must be > 0.")
+    )
+    
+    # Welch's t-test calculations
+    diff_xbar <- xbar1 - xbar2
+    se <- sqrt(s1^2/n1 + s2^2/n2)
+    t_stat <- (diff_xbar - delta0) / se
+    
+    # Welch-Satterthwaite degrees of freedom
+    df_num <- (s1^2/n1 + s2^2/n2)^2
+    df_den <- ( (s1^2/n1)^2 / (n1-1) ) + ( (s2^2/n2)^2 / (n2-1) )
+    df <- df_num / df_den
+    
+    p_val <- switch(input$d2m_alternative,
+                    "less" = pt(t_stat, df),
+                    "greater" = pt(t_stat, df, lower.tail = FALSE),
+                    "two.sided" = 2 * pt(abs(t_stat), df, lower.tail = FALSE)
+    )
+    
+    t_crit <- qt(1 - (1 - conf_level)/2, df)
+    moe <- t_crit * se
+    ci <- diff_xbar + c(-moe, moe)
+    
+    list(
+      n1 = n1, xbar1 = xbar1, s1 = s1,
+      n2 = n2, xbar2 = xbar2, s2 = s2,
+      delta0 = delta0, diff_xbar = diff_xbar,
+      t_stat = t_stat, df = df, p_value = p_val,
+      ci = ci, conf_level = conf_level
+    )
+  })
   
+  # Results table for Difference Two Means
+  output$d2m_results_table <- render_gt({
+    res <- d2m_results()
+    validate(need(!is.null(res), "Calculation error or invalid inputs."))
+    
+    alt_sym <- switch(input$d2m_alternative,
+                      "less" = "<", "greater" = ">", "two.sided" = "≠")
+    
+    h0_str <- paste0("$\\mu_1 - \\mu_2 = ", res$delta0, "$")
+    ha_str <- paste0("$\\mu_1 - \\mu_2 ", alt_sym, " ", res$delta0, "$")
+    
+    df_out <- data.frame(
+      label = c("$H_0$", "$H_A$",
+                "$n_1$", "$\\bar{x}_1$", "$s_1$",
+                "$n_2$", "$\\bar{x}_2$", "$s_2$",
+                "$\\bar{x}_1 - \\bar{x}_2$",
+                "$df$", "$t_{obs}$", "$p$‑value"),
+      value = c(h0_str, ha_str,
+                res$n1, round(res$xbar1, 3), round(res$s1, 3),
+                res$n2, round(res$xbar2, 3), round(res$s2, 3),
+                round(res$diff_xbar, 3),
+                round(res$df, 2), round(res$t_stat, 3),
+                formatC(res$p_value, format = "f", digits = 4))
+    )
+    
+    df_out |>
+      gt() |>
+      fmt_markdown(columns = everything()) |>
+      tab_header(title = "T-Test for Difference Between Two Means") |>
+      tab_options(column_labels.hidden = TRUE, table.width = pct(100))
+  })
+  
+  # Conclusions table for Difference Two Means
+  output$d2m_conclusions <- render_gt({
+    res <- d2m_results()
+    validate(need(!is.null(res), "")) # Silently fail if res is null
+    
+    alpha <- c(0.01, 0.05, 0.10)
+    decisions <- ifelse(res$p_value < alpha, "**rejected**", "**not rejected**")
+    
+    data.frame(
+      conclusions = paste0("The null hypothesis is ", decisions, " at $\\alpha = $ ", alpha)
+    ) |>
+      gt() |>
+      tab_header(title = "Test Conclusions") |>
+      tab_options(column_labels.hidden = TRUE, table.width = pct(100)) |>
+      fmt_markdown(columns = everything())
+  })
+  
+  # CI helper for Difference Two Means
+  d2m_ci_gt <- reactive({
+    res <- d2m_results()
+    validate(need(!is.null(res), "CI cannot be computed with current inputs."))
+    
+    data.frame(
+      label = c("Confidence level", "Interval for $\\mu_1 - \\mu_2$"),
+      value = c(paste0(round(res$conf_level * 100), "%"),
+                sprintf("[%.3f, %.3f]", res$ci[1], res$ci[2]))
+    ) |>
+      gt() |>
+      fmt_markdown(columns = label) |>
+      tab_header(title = "Confidence Interval") |>
+      tab_options(column_labels.hidden = TRUE, table.width = pct(100))
+  })
+  
+  output$d2m_ci_table_side   <- render_gt(d2m_ci_gt())
+  output$d2m_ci_table_bottom <- render_gt(d2m_ci_gt())
+  
+  # Plot for Difference Two Means
+  output$d2m_plot <- renderPlot({
+    if (!input$d2m_show_test && !input$d2m_show_ci) {
+      plot.new(); text(0.5, 0.5, "No test or CI selected", cex = 1.4)
+      return()
+    }
+    
+    res <- tryCatch(d2m_results(), error = function(e) NULL)
+    if (is.null(res) || is.na(res$df) || res$df <= 0) {
+      plot.new(); text(0.5, 0.5, "Invalid input parameters for plot", cex = 1.5)
+      return()
+    }
+    
+    t_obs <- res$t_stat
+    df_val <- res$df
+    
+    # Determine plot range dynamically or use fixed range like -4 to 4 for t-values
+    plot_range <- max(4, abs(t_obs) + 1) 
+    x_vals <- seq(-plot_range, plot_range, length.out = 400)
+    y_vals <- dt(x_vals, df = df_val)
+    
+    plot_title <- "Sampling Distribution of t-statistic Under Null Hypothesis"
+    plot(x_vals, y_vals, type = "l", lwd = 2, col = "lightgrey",
+         xlab = "t-value", ylab = "Density", main = plot_title)
+    
+    shade_col <- "#FFD100" # UCLA Gold
+    
+    if (input$d2m_show_test) {
+      if (input$d2m_alternative == "less") {
+        idx <- x_vals <= t_obs
+        polygon(c(x_vals[idx], rev(x_vals[idx])), c(y_vals[idx], rep(0, sum(idx))), col = shade_col, border = NA)
+      } else if (input$d2m_alternative == "greater") {
+        idx <- x_vals >= t_obs
+        polygon(c(x_vals[idx], rev(x_vals[idx])), c(y_vals[idx], rep(0, sum(idx))), col = shade_col, border = NA)
+      } else { # two.sided
+        crit_val <- abs(t_obs)
+        idxL <- x_vals <= -crit_val
+        polygon(c(x_vals[idxL], rev(x_vals[idxL])), c(y_vals[idxL], rep(0, sum(idxL))), col = shade_col, border = NA)
+        idxR <- x_vals >= crit_val
+        polygon(c(x_vals[idxR], rev(x_vals[idxR])), c(y_vals[idxR], rep(0, sum(idxR))), col = shade_col, border = NA)
+      }
+    }
+  })
   
   
   # ======================================================================

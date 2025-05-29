@@ -267,17 +267,77 @@ ui <- fluidPage(
     # ======================================================================
     # TAB 4: Difference Two Means
     # ======================================================================
+    
     tabPanel(
       "Difference Two Means",
-      sidebarLayout(sidebarPanel(
-        
-        # insert content here
-        
+      sidebarLayout(
+        sidebarPanel(
+          # Checkboxes for CI and Test
+          checkboxInput("d2m_show_ci", "Confidence Interval", TRUE),
+          checkboxInput("d2m_show_test", "Test", TRUE),
+          
+          # Confidence Level
+          conditionalPanel(
+            condition = "input.d2m_show_ci == true",
+            selectInput("d2m_conf_level", "Confidence Level:",
+                        choices  = c("90%" = 0.90, "95%" = 0.95, "99%" = 0.99),
+                        selected = 0.95)
+          ),
+          
+          # Type of Test
+          conditionalPanel(
+            condition = "input.d2m_show_test == true",
+            radioButtons("d2m_alternative", "Select the type of test ($H_A: \\mu_1 - \\mu_2$):",
+                         choices = c("≠ 0 (Two-sided)" = "two.sided",
+                                     "< 0 (Left-tailed)" = "less",
+                                     "> 0 (Right-tailed)" = "greater"),
+                         selected = "two.sided")
+            # Hypothesized difference input was previously removed as per your request
+          ),
+          
+          tags$hr(),
+          tags$strong("Group 1"),
+          numericInput("d2m_n1", HTML("Sample size (n<sub>1</sub>)"), value = 30, min = 2, step = 1),
+          numericInput("d2m_xbar1", HTML("Sample mean (x&#772;<sub>1</sub>)"), value = 123.8),
+          numericInput("d2m_s1", HTML("Sample SD (s<sub>1</sub>)"), value = 4.6, min = 0),
+          
+          tags$hr(),
+          tags$strong("Group 2"),
+          numericInput("d2m_n2", HTML("Sample size (n<sub>2</sub>)"), value = 30, min = 2, step = 1),
+          numericInput("d2m_xbar2", HTML("Sample mean (x&#772;<sub>2</sub>)"), value = 116.4),
+          numericInput("d2m_s2", HTML("Sample SD (s<sub>2</sub>)"), value = 16.09, min = 0)
         ), 
         mainPanel(
-        
-        # insert content here
-        
+          plotOutput("d2m_plot"), # Plot remains at the top
+          
+          # START OF CHANGES: Modified structure for stacked tables
+          conditionalPanel(
+            condition = "input.d2m_show_test == true",
+            # Results Table
+            div(style = "margin-top: 20px; width: fit-content;", # Added style for spacing and width
+                gt_output("d2m_results_table")
+            ),
+            # Test Conclusions
+            div(style = "margin-top: 20px; width: fit-content;", # Added style
+                gt_output("d2m_conclusions")
+            ),
+            # Conditional Confidence Interval Table (part of the "Test ON" block)
+            conditionalPanel(
+              condition = "input.d2m_show_ci == true",
+              div(style = "margin-top: 20px; width: fit-content;", # Added style
+                  gt_output("d2m_ci_table_side") 
+              )
+            )
+          ),
+          # END OF CHANGES
+          
+          # This section is for when Test is OFF & CI is ON (already stacked, styling adjusted for consistency)
+          conditionalPanel(
+            condition = "input.d2m_show_test == false && input.d2m_show_ci == true",
+            div(style = "margin-top: 20px; width: fit-content;", 
+                gt_output("d2m_ci_table_bottom")
+            )
+          )
         )
       )
     ),
