@@ -178,7 +178,7 @@ ui <- fluidPage(
     # TAB 3: Difference Two Proportion
     # ====================================================================
     tabPanel(
-      "Difference Two Proportion",
+      "Difference Two Proportions",
       sidebarLayout(
         sidebarPanel(
           checkboxInput("d2_show_ci", "Confidence Interval", TRUE),
@@ -445,7 +445,7 @@ ui <- fluidPage(
     # ======================================================================
     
     tabPanel(
-      "Chi-square",
+      "Chi-square Distribution",
       sidebarLayout(
         sidebarPanel(
           selectInput("chisq_mode", "Select Mode:", 
