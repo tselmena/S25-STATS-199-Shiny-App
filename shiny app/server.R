@@ -1219,7 +1219,7 @@ server <- function(input, output, session) {
   # ======================================================================
   
   output$copyright <- renderUI({
-    copy1 <- p("INSERT ONE LINE DESCRIPTION")
+    copy1 <- p("UCLA Stats Calculator is an R Shiny web app that makes critical-value calculations simple and intuitive, while also serving as a general-purpose tool for performing common statistical tests and confidence intervals.")
     copy2 <- p("Copyright (C) 2025 Tselmen Anuurad, Claudia Chan, Hayley Labia, and Thomas Maierhofer")
     copy3 <- p("This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.")
     copy4 <- p("This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.")
