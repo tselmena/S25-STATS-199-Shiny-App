@@ -116,9 +116,9 @@ server <- function(input, output, session) {
         
         alt_str <- switch(
           input$alternative,
-          "less" = paste0("p < ", input$p),
-          "greater" = paste0("p > ", input$p),
-          "two.sided" = paste0("p ≠ ", input$p)
+          "less" = paste0("$p < ", input$p, "$"),
+          "greater" = paste0("$p > ", input$p, "$"),
+          "two.sided" = paste0("$p ≠ ", input$p, "$")
         )
 
         df <- data.frame(
@@ -126,14 +126,14 @@ server <- function(input, output, session) {
             "$H_0$", "$H_A$", "$n$", "$x$", "$\\hat p$", "$p$‑value"
           ),
           value = c(
-            paste0("p = ", input$p), alt_str, input$n, 
+            paste0("$p = ", input$p, "$"), alt_str, input$n, 
             round(input$p_hat * input$n), round(test_res$estimate, 3),
             p_value
           )
         )
         df |>
           gt() |>                 
-          fmt_markdown(columns = label) |>      
+          fmt_markdown(columns = everything()) |>      
           tab_header(title = "One Proportion Test") |>
           tab_options(column_labels.hidden = TRUE, 
                       table.width = pct(100)) 
@@ -254,15 +254,15 @@ server <- function(input, output, session) {
       label = c("$H_0$", "$H_A$",
                 "$n$", "$\\bar{x}$", "$s$",
                 "$t$", "$p$‑value"),
-      value = c(paste0("μ = ", res$mu0),
-                paste0("μ ", alt_sym, " ", res$mu0),
+      value = c(paste0("$\\mu = ", res$mu0, "$"),
+                paste0("$\\mu ", alt_sym, " ", res$mu0, "$"),
                 res$n, round(res$xbar,3), round(res$s,3), 
                 round(res$t_stat,3),
                 formatC(res$p_value, format = "f", digits = 4))
     )
     df |>
       gt() |>
-      fmt_markdown(columns = label) |>
+      fmt_markdown(columns = everything()) |>
       tab_header(title = "One Mean t‑Test") |>
       tab_options(column_labels.hidden = TRUE,
                   table.width = pct(100))
@@ -597,7 +597,7 @@ server <- function(input, output, session) {
     validate(need(!is.null(res), "CI cannot be computed with current inputs."))
     
     data.frame(
-      label = c("Confidence level", "Interval for $\\mu_1 - \\mu_2$"),
+      label = c("Confidence level", "Interval"),
       value = c(paste0(round(res$conf_level * 100), "%"),
                 sprintf("[%.3f, %.3f]", res$ci[1], res$ci[2]))
     ) |>
@@ -631,7 +631,7 @@ server <- function(input, output, session) {
     x_vals <- seq(-plot_range, plot_range, length.out = 400)
     y_vals <- dt(x_vals, df = df_val)
     
-    plot_title <- "Sampling Distribution of t-statistic Under Null Hypothesis"
+    plot_title <- "Sampling Distribution Under Null Hypothesis"
     plot(x_vals, y_vals, type = "l", lwd = 2, col = "lightgrey",
          xlab = "t-value", ylab = "Density", main = plot_title)
     

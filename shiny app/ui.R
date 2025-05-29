@@ -19,7 +19,7 @@ ui <- fluidPage(
   
   tabsetPanel(
     # ======================================================================
-    # TAB 1: One Proportion (ui.R snippet)
+    # TAB 1: One Proportion 
     # ======================================================================
     tabPanel("One Proportion",
              sidebarLayout(
@@ -51,7 +51,7 @@ ui <- fluidPage(
                      selected = "two.sided"
                    )
                  ),
-
+                 
                  # Numeric inputs for the test
                  conditionalPanel(
                    condition = "!(input.show_ci == true && input.show_test == false)",
@@ -75,34 +75,29 @@ ui <- fluidPage(
                ),
                
                mainPanel(
-                 plotOutput("plot"),
-                 # TEST ON 
+                 plotOutput("plot"), # Plot remains at the top
+                 
+                 # TEST ON - Stacked tables
                  conditionalPanel(
                    condition = "input.show_test == true",
-                   splitLayout(
-                     cellWidths = c("30%", "55%"),
-                     cellArgs = list(style = "padding:0; margin:0; vertical-align:top;"),
-                     
-                     # left column
-                     div(gt_output("results_table")),
-                     
-                     # right column: conclusions + CI
-                     div(
-                       style = "margin-left:20px;              /* horizontal gap */        \
-             display:flex; flex-direction:column; row-gap:0px;",
-                       gt_output("conclusions"),
+                   div(style = "margin-top: 20px; width: fit-content;", # Outer div for width control
+                       div(gt_output("results_table")), # Main results table
+                       div(style = "margin-top: 15px;", # Spacing for conclusions table
+                           gt_output("conclusions")
+                       ),
                        conditionalPanel(
                          condition = "input.show_ci == true",
-                         gt_output("ci_table_side")     
+                         div(style = "margin-top: 15px;", # Spacing for CI table
+                             gt_output("ci_table_side")     
+                         )
                        )
-                     )
                    )
                  ),
                  
-                 # TEST OFF and CI ON 
+                 # TEST OFF and CI ON (already stacked, styling adjusted)
                  conditionalPanel(
                    condition = "input.show_test == false && input.show_ci == true",
-                   div(style = "margin-top:25px; width:fit-content;",
+                   div(style = "margin-top: 20px; width:fit-content;",
                        gt_output("ci_table_bottom"))            
                  )
                )
@@ -145,28 +140,29 @@ ui <- fluidPage(
         ),
         
         mainPanel(
-          plotOutput("mean_plot"),
-          # TEST ON 
+          plotOutput("mean_plot"), # Plot remains at the top
+          
+          # TEST ON - Stacked tables
           conditionalPanel(
             condition = "input.mean_show_test == true",
-            splitLayout(
-              cellWidths = c("30%", "55%"),
-              cellArgs   = list(style="padding:0;margin:0;vertical-align:top;"),
-              div(gt_output("mean_results_table")),
-              div(style="margin-left:20px;display:flex;flex-direction:column;row-gap:0px;",
-                  gt_output("mean_conclusions"),
-                  conditionalPanel(
-                    condition = "input.mean_show_ci == true",
-                    gt_output("mean_ci_table_side")
+            div(style = "margin-top: 20px; width: fit-content;", # Outer div for width control
+                div(gt_output("mean_results_table")), # Main results table
+                div(style = "margin-top: 15px;", # Spacing for conclusions table
+                    gt_output("mean_conclusions")
+                ),
+                conditionalPanel(
+                  condition = "input.mean_show_ci == true",
+                  div(style = "margin-top: 15px;", # Spacing for CI table
+                      gt_output("mean_ci_table_side")
                   )
-              )
+                )
             )
           ),
           
-          # TEST OFF & CI ON 
+          # TEST OFF & CI ON (already stacked, styling adjusted)
           conditionalPanel(
             condition = "input.mean_show_test == false && input.mean_show_ci == true",
-            div(style="margin-top:25px;width:fit-content;",
+            div(style="margin-top: 20px; width:fit-content;",
                 gt_output("mean_ci_table_bottom"))
           )
         )
@@ -175,10 +171,10 @@ ui <- fluidPage(
     
     
     # ====================================================================
-    # TAB 3: Difference Two Proportion
+    # TAB 3: Difference Two Proportions 
     # ====================================================================
     tabPanel(
-      "Difference Two Proportions",
+      "Difference Two Proportions", # Title as provided in the snippet
       sidebarLayout(
         sidebarPanel(
           checkboxInput("d2_show_ci", "Confidence Interval", TRUE),
@@ -190,7 +186,7 @@ ui <- fluidPage(
                         choices  = c("90%" = 0.90, "95%" = 0.95, "99%" = 0.99),
                         selected = 0.95)
           ),
-        
+          
           conditionalPanel(
             condition = "input.d2_show_test == true",
             radioButtons("d2_alternative", "Select the type of test:",
@@ -199,9 +195,9 @@ ui <- fluidPage(
                                      "Right-tailed" = "greater"),
                          selected = "two.sided")
           ),
-    
+          
           tags$hr(),
-          tags$strong("Group 1"),
+          tags$strong("Group 1"),
           numericInput("d2_n1", "Sample size (n₁)", 30,  step = 1),
           
           conditionalPanel(
@@ -214,12 +210,12 @@ ui <- fluidPage(
             condition = "input.d2_use_successes1 == true",
             numericInput("d2_x1", "Number of successes (x₁)", 18, step = 1)
           ),
-      
+          
           checkboxInput("d2_use_successes1",
                         "Use first number of successes instead", FALSE),
-
+          
           tags$hr(),
-          tags$strong("Group 2"),
+          tags$strong("Group 2"),
           numericInput("d2_n2", "Sample size (n₂)", 40,  step = 1),
           conditionalPanel(
             condition = "input.d2_use_successes2 == false",
@@ -236,27 +232,29 @@ ui <- fluidPage(
         
         # main: plot and tables
         mainPanel(
-          plotOutput("d2_zplot"),
-          # two‑column only when the test box is on
+          plotOutput("d2_zplot"), # Plot remains at the top
+          
+          # TEST ON - Stacked tables
           conditionalPanel(
             condition = "input.d2_show_test == true",
-            splitLayout(
-              cellWidths = c("30%", "55%"),
-              cellArgs = list(style="padding:0;margin:0;vertical-align:top;"),
-              div(gt_output("d2_results_table")),
-              div(style = "margin-left:20px;display:flex;flex-direction:column;row-gap:0px;",
-                  gt_output("d2_conclusions"),
-                  conditionalPanel(
-                    condition = "input.d2_show_ci == true",
-                    gt_output("d2_ci_table_side")
+            div(style = "margin-top: 20px; width: fit-content;", # Outer div for width control
+                div(gt_output("d2_results_table")), # Main results table
+                div(style = "margin-top: 15px;", # Spacing for conclusions table
+                    gt_output("d2_conclusions")
+                ),
+                conditionalPanel(
+                  condition = "input.d2_show_ci == true",
+                  div(style = "margin-top: 15px;", # Spacing for CI table
+                      gt_output("d2_ci_table_side")
                   )
-              )
+                )
             )
           ),
           
+          # TEST OFF & CI ON (already stacked, styling adjusted)
           conditionalPanel(
             condition = "input.d2_show_test == false && input.d2_show_ci == true",
-            div(style="margin-top:25px;width:fit-content;",
+            div(style="margin-top: 20px; width:fit-content;",
                 gt_output("d2_ci_table_bottom"))
           )
         )
@@ -287,12 +285,11 @@ ui <- fluidPage(
           # Type of Test
           conditionalPanel(
             condition = "input.d2m_show_test == true",
-            radioButtons("d2m_alternative", "Select the type of test ($H_A: \\mu_1 - \\mu_2$):",
-                         choices = c("≠ 0 (Two-sided)" = "two.sided",
-                                     "< 0 (Left-tailed)" = "less",
-                                     "> 0 (Right-tailed)" = "greater"),
+            radioButtons("d2m_alternative", "Select the type of test:",
+                         choices = c("Two-sided" = "two.sided",
+                                     "Left-tailed" = "less",
+                                     "Right-tailed" = "greater"),
                          selected = "two.sided")
-            # Hypothesized difference input was previously removed as per your request
           ),
           
           tags$hr(),
@@ -308,24 +305,22 @@ ui <- fluidPage(
           numericInput("d2m_s2", HTML("Sample SD (s<sub>2</sub>)"), value = 16.09, min = 0)
         ), 
         mainPanel(
-          plotOutput("d2m_plot"), # Plot remains at the top
+          plotOutput("d2m_plot"), 
           
           conditionalPanel(
             condition = "input.d2m_show_test == true",
-            # Results Table
-            div(style = "margin-top: 20px; width: fit-content;", # Added style for spacing and width
-                gt_output("d2m_results_table")
-            ),
-            # Test Conclusions
-            div(style = "margin-top: 20px; width: fit-content;", # Added style
-                gt_output("d2m_conclusions")
-            ),
-            # Conditional Confidence Interval Table (part of the "Test ON" block)
-            conditionalPanel(
-              condition = "input.d2m_show_ci == true",
-              div(style = "margin-top: 20px; width: fit-content;", # Added style
-                  gt_output("d2m_ci_table_side") 
-              )
+            div(style = "margin-top: 20px; width: fit-content;", # Outer div for width control
+                div(gt_output("d2m_results_table")), # Main results table
+                div(style = "margin-top: 15px;", # Spacing for conclusions table
+                    gt_output("d2m_conclusions")
+                ),
+                # Conditional Confidence Interval Table
+                conditionalPanel(
+                  condition = "input.d2m_show_ci == true",
+                  div(style = "margin-top: 15px;", # Spacing for CI table
+                      gt_output("d2m_ci_table_side") 
+                  )
+                )
             )
           ),
           
