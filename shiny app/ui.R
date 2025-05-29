@@ -310,7 +310,6 @@ ui <- fluidPage(
         mainPanel(
           plotOutput("d2m_plot"), # Plot remains at the top
           
-          # START OF CHANGES: Modified structure for stacked tables
           conditionalPanel(
             condition = "input.d2m_show_test == true",
             # Results Table
@@ -329,9 +328,7 @@ ui <- fluidPage(
               )
             )
           ),
-          # END OF CHANGES
           
-          # This section is for when Test is OFF & CI is ON (already stacked, styling adjusted for consistency)
           conditionalPanel(
             condition = "input.d2m_show_test == false && input.d2m_show_ci == true",
             div(style = "margin-top: 20px; width: fit-content;", 
