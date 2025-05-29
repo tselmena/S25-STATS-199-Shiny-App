@@ -2,6 +2,8 @@
 
 ui <- fluidPage(
   
+  useShinyalert(),
+  
   # theme
   theme = shinytheme("flatly"),
   
@@ -427,17 +429,11 @@ ui <- fluidPage(
     tabPanel(
       "Citation",
       mainPanel(
-        paste("This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License or any later version."),
+        htmlOutput("copyright"),
         
-        uiOutput("license_link"),
+        htmlOutput("APA"),
         
-        htmlOutput("space"),
-        
-        paste("APA: Anuurad, T., Chan, C., Labia, H., Maierhofer, T. (2025). UCLA Stats Calculator (Version 1.0) [Computer software]."),
-        
-        uiOutput("repository_link"),
-        
-        htmlOutput("html_text")
+        htmlOutput("bibtex")
         
         )
       )

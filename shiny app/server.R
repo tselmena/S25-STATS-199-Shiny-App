@@ -2,6 +2,8 @@
 
 server <- function(input, output, session) {
   
+  shinyalert("UCLA Stats Calculator", "This program comes with ABSOLUTELY NO WARRANTY; for details, see the 'Citation' tab. This is free software, and you are welcome to redistribute it under certain conditions; for details, see the 'Citation' tab.", type = "info")
+  
 # ======================================================================
 # TAB 1: One Proportion Test
 # ======================================================================
@@ -1060,16 +1062,25 @@ server <- function(input, output, session) {
   # TAB 8: Citation
   # ======================================================================
   
-  output$space <- renderUI({
-    insert_space <- p("")
-    HTML(paste(insert_space))
+  output$copyright <- renderUI({
+    copy1 <- p("INSERT ONE LINE DESCRIPTION")
+    copy2 <- p("Copyright (C) 2025 Tselmen Anuurad, Claudia Chan, Hayley Labia, and Thomas Maierhofer")
+    copy3 <- p("This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.")
+    copy4 <- p("This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.")
+    copy5 <- p("You should have received a copy of the GNU General Public License along with this program. If not, see", tags$a(href = "https://www.gnu.org/licenses/", "https://www.gnu.org/licenses/"))
+    copy6 <- p("Our license:", tags$a(href = "https://www.gnu.org/licenses/gpl-3.0.txt", "https://www.gnu.org/licenses/gpl-3.0.txt"))
+    
+    HTML(paste(copy1, copy2, copy3, copy4, copy5, copy6, sep = "<br>"))
   })
   
-  output$repository_link <- renderUI({
-    tags$a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App", "https://github.com/tselmena/S25-STATS-199-Shiny-App")
+  output$APA <- renderUI({
+    apa1 <- p("")
+    apa2 <- p("APA: Anuurad, T., Chan, C., Labia, H., Maierhofer, T. (2025). UCLA Stats Calculator (Version 1.0) [Computer software].", tags$a(href = "https://github.com/tselmena/S25-STATS-199-Shiny-App", "https://github.com/tselmena/S25-STATS-199-Shiny-App"))
+    
+    HTML(paste(apa1, apa2, sep = "<br>"))
   })
   
-  output$html_text <- renderUI({
+  output$bibtex <- renderUI({
     tag0 <- p("")
     tag1 <- p("BibTeX:")
     tag2 <- p("@misc{UCLA Stats Calculator,")
@@ -1083,11 +1094,4 @@ server <- function(input, output, session) {
     
     HTML(paste(tag0, tag1, tag2, tag3, tag4, tag5, tag6, tag7, tag8, tag9, sep = "<br>"))
   })
-  
-  license <- "License: GPL-3.0-or-later"
-  license_url <-a(href = "https://www.gnu.org/licenses/gpl-3.0.txt")
-  output$license_link <- renderUI({
-    tags$a(href = "https://www.gnu.org/licenses/gpl-3.0.txt", license)
-  })
-
 }
