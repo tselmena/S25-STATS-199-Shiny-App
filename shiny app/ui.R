@@ -377,9 +377,9 @@ ui <- fluidPage(
         ),
         
         mainPanel(
+          plotOutput("norm_plot"),
           textOutput("norm_prob"),
-          textOutput("threshold_text"),
-          plotOutput("norm_plot")
+          textOutput("threshold_text")
         )
       )
     ),
@@ -428,9 +428,9 @@ ui <- fluidPage(
         ),
         
         mainPanel(
+          plotOutput("t_plot"),
           textOutput("t_prob"),
-          textOutput("t_threshold_text"),
-          plotOutput("t_plot")
+          textOutput("t_threshold_text")
         )
       )
     ),
@@ -467,9 +467,10 @@ ui <- fluidPage(
           )
         ),
         mainPanel(
+          plotOutput("chisq_plot"),
           textOutput("chisq_prob"),
-          textOutput("chisq_threshold_text"),
-          plotOutput("chisq_plot")
+          textOutput("chisq_threshold_text")
+          
         )
       )
     ),

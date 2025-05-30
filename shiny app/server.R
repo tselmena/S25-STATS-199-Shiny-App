@@ -4,9 +4,9 @@ server <- function(input, output, session) {
   
   shinyalert("UCLA Stats Calculator", "This program comes with ABSOLUTELY NO WARRANTY; for details, see the 'Citation' tab. This is free software, and you are welcome to redistribute it under certain conditions; for details, see the 'Citation' tab.", type = "info")
   
-# ======================================================================
-# TAB 1: One Proportion Test
-# ======================================================================
+  # ======================================================================
+  # TAB 1: One Proportion Test
+  # ======================================================================
   calc_results <- reactive({
     req(input$n)
     if (isTRUE(input$use_successes)) {
@@ -16,7 +16,7 @@ server <- function(input, output, session) {
       ph <- input$p_hat
       x  <- round(ph * input$n)
     }
-
+    
     validate(
       need(input$n > 0, "Sample size n must be > 0"),
       need(x >= 0 && x <= input$n, "x must be between 0 and n"),
@@ -29,7 +29,7 @@ server <- function(input, output, session) {
     prop.test(x, input$n, p = input$p, alternative = input$alternative,
               conf.level = as.numeric(input$conf_level))
   })
-
+  
   # CI check box
   observe({
     if (input$show_ci) {
@@ -63,29 +63,37 @@ server <- function(input, output, session) {
       plot.new(); text(0.5, 0.5, "Invalid input parameters", cex = 1.5)
       return()
     }
-  
+    
     x_vals <- 0:input$n
     probs <- dbinom(x_vals, size = input$n, prob = input$p)
     bar_col <- rep("lightgrey", length(x_vals))
     
     # rejection region
     if (input$alternative == "less") {
-      bar_col[x_vals <= x_obs] <- "#FFD100"
+      bar_col[x_vals <= x_obs] <- "#2774AE"
     } else if (input$alternative == "greater") {
-      bar_col[x_vals >= x_obs] <- "#FFD100"
+      bar_col[x_vals >= x_obs] <- "#2774AE"
     } else {                                     
       mu <- input$n * input$p
       d <- abs(x_obs - mu)
       idx  <- which(x_vals <= floor(mu - d) |
                       x_vals >= ceiling(mu + d))
-      bar_col[idx] <- "#FFD100"
+      bar_col[idx] <- "#2774AE"
     }
     
-    barplot(height = probs, names.arg = x_vals, col = bar_col, border = "black",
-            space = 0.2, xlab = "Number of Successes (x)", ylab = "Probability",
-            main = "Sampling Distribution Under Null Hypothesis")
+    df <- data.frame(x = x_vals, prob = probs, color = bar_col)
+    
+    ggplot(df, aes(x = factor(x), y = prob, fill = color)) +
+      geom_col(color = "#2774AE") +
+      scale_fill_identity() +
+      labs(
+        title = expression(bold("Sampling Distribution Under Null Hypothesis")),
+        x = "Number of Successes (x)",
+        y = "Probability"
+      ) +
+      theme_minimal()
   })
-
+  
   # show or hide the test results and conclusions
   observe({
     if (input$show_test) {
@@ -99,7 +107,7 @@ server <- function(input, output, session) {
         
         sample_p <- as.numeric(test_res$estimate)       
         successes <- round(sample_p * input$n)           
-    
+        
         observeEvent(input$p_hat, {
           if (!isTRUE(input$use_successes)) {
             updateNumericInput(session, "x_succ",
@@ -120,7 +128,7 @@ server <- function(input, output, session) {
           "greater" = paste0("$p > ", input$p, "$"),
           "two.sided" = paste0("$p ≠ ", input$p, "$")
         )
-
+        
         df <- data.frame(
           label = c(
             "$H_0$", "$H_A$", "$n$", "$x$", "$\\hat p$", "$p$‑value"
@@ -157,14 +165,14 @@ server <- function(input, output, session) {
           tab_header(title = "Test Conclusions") |> 
           tab_options(column_labels.hidden = TRUE, 
                       table.width = pct(100)
-                      ) |> 
+          ) |> 
           fmt_markdown(columns = everything())
       })
-      } else {
+    } else {
       # clear if show_test is off
-        output$results_table <- renderText({ "" })
-        output$conclusions   <- renderText({ "" })
-      }
+      output$results_table <- renderText({ "" })
+      output$conclusions   <- renderText({ "" })
+    }
     
     ci_gt <- reactive({
       req(input$show_ci)
@@ -215,11 +223,11 @@ server <- function(input, output, session) {
         tab_options(column_labels.hidden = TRUE, table.width = pct(100))
     )
   })
- 
-# ======================================================================
-# TAB 2: One Mean
-# ======================================================================
-
+  
+  # ======================================================================
+  # TAB 2: One Mean
+  # ======================================================================
+  
   mean_results <- reactive({
     n <- input$mean_n
     s <- input$mean_s
@@ -231,11 +239,11 @@ server <- function(input, output, session) {
       need(n > 1, "Sample size n must be > 1"),
       need(s > 0, "Sample SD must be > 0")
     )
-   
+    
     t_stat <- (xbar - mu0) / (s / sqrt(n))
     p_val <- switch(input$mean_alt,
-                     "less" = pt(t_stat, df), "greater" = 1 - pt(t_stat, df),
-                     "two.sided" = 2 * (1 - pt(abs(t_stat), df)))
+                    "less" = pt(t_stat, df), "greater" = 1 - pt(t_stat, df),
+                    "two.sided" = 2 * (1 - pt(abs(t_stat), df)))
     
     conf <- as.numeric(input$mean_conf_level)
     moe <- qt(1 - (1-conf)/2, df) * s / sqrt(n)
@@ -273,7 +281,7 @@ server <- function(input, output, session) {
     res <- mean_results()
     alpha <- c(0.01,0.05,0.10)
     dec <- ifelse(res$p_value < alpha, "**rejected**", "**not rejected**")
-
+    
     data.frame(
       conclusions = paste0("The null hypothesis is ", dec, " at $\\alpha = $ ", alpha)
     ) |>
@@ -304,42 +312,51 @@ server <- function(input, output, session) {
   # plot 
   output$mean_plot <- renderPlot({
     if (!input$mean_show_test && !input$mean_show_ci) {
-      plot.new(); text(0.5,0.5,"No test or CI selected", cex = 1.4)
+      ggplot() + 
+        annotate("text", x = 0.5, y = 0.5, label = "No test or CI selected", size = 6) + 
+        theme_void()
       return()
     }
+    
     res <- mean_results()
-    x <- seq(-4, 4,len = 400)
+    x <- seq(-4, 4, len = 400)
     y <- dt(x, df = res$df)
-    shade <- "#FFD100"
-    plot(x, y, type = "l", lwd = 2, col = "lightgrey",
-         xlab = "t‑value", ylab = "Density",
-         main = "Sampling Distribution Under Null Hypothesis")
-
+    df_plot <- data.frame(x = x, y = y)
+    shade <- "#2774AE"
+    
+    p <- ggplot(df_plot, aes(x = x, y = y)) +
+      geom_line(color = "#2774AE", size = 1.2) +
+      labs(
+        x = "t-value", y = "Density",
+        title = expression(bold("Sampling Distribution Under Null Hypothesis"))
+      ) +
+      theme_minimal()
+    
     if (input$mean_show_test) {
       if (input$mean_alt == "less") {
-        idx <- x <= res$t_stat
-        polygon(c(x[idx], rev(x[idx])), c(y[idx], rep(0, sum(idx))),
-                 col = shade, border = NA )
+        p <- p + 
+          geom_area(data = subset(df_plot, x <= res$t_stat), 
+                    aes(x = x, y = y), fill = shade, alpha = 0.5)
       } else if (input$mean_alt == "greater") {
-        idx <- x >= res$t_stat
-        polygon(c(x[idx], rev(x[idx])), c(y[idx], rep(0, sum(idx))),
-                 col = shade, border = NA )
+        p <- p + 
+          geom_area(data = subset(df_plot, x >= res$t_stat), 
+                    aes(x = x, y = y), fill = shade, alpha = 0.5)
       } else {
         crit <- abs(res$t_stat)
-        idxL <- x <= -crit # left tail indices
-        polygon( c(x[idxL], rev(x[idxL])), c(y[idxL], rep(0, sum(idxL))),
-                 col = shade, border = NA )
-        
-        idxR <- x >=  crit # right tail indices
-        polygon( c(x[idxR], rev(x[idxR])), c(y[idxR], rep(0, sum(idxR))),
-                 col = shade, border = NA )
+        p <- p + 
+          geom_area(data = subset(df_plot, x <= -crit), 
+                    aes(x = x, y = y), fill = shade, alpha = 0.5) +
+          geom_area(data = subset(df_plot, x >= crit), 
+                    aes(x = x, y = y), fill = shade, alpha = 0.5)
       }
     }
+    
+    p
   })
   
-# ======================================================================
-# TAB 3: Difference Two Proportion
-# ======================================================================
+  # ======================================================================
+  # TAB 3: Difference Two Proportion
+  # ======================================================================
   d2_results <- reactive({
     if (input$d2_use_successes1) {
       x1 <- input$d2_x1
@@ -390,7 +407,7 @@ server <- function(input, output, session) {
   output$d2_results_table <- render_gt({
     res <- d2_results()
     alt_str2 <- switch(input$d2_alternative,
-                      "less" = "<", "greater" = ">", "two.sided" = "≠")
+                       "less" = "<", "greater" = ">", "two.sided" = "≠")
     # hypothesis strings
     h0 <- paste0("$p_1 - p_2 = 0 $")
     ha <- paste0("$p_1 - p_2 ", alt_str2, " 0$")
@@ -442,7 +459,7 @@ server <- function(input, output, session) {
   
   output$d2_ci_table_side <- render_gt(
     d2_ci_gt() |> 
-        tab_options(column_labels.hidden = TRUE, table.width = pct(100)))
+      tab_options(column_labels.hidden = TRUE, table.width = pct(100)))
   
   output$d2_ci_table_bottom <- render_gt(
     d2_ci_gt() |> 
@@ -451,46 +468,56 @@ server <- function(input, output, session) {
   
   # plot
   output$d2_zplot <- renderPlot({
-    # show nothing if user turned both outputs off
     if (!input$d2_show_test) {
-      plot.new(); text(0.5,0.5,"Test switched off", cex = 1.3)
+      ggplot() +
+        annotate("text", x = 0, y = 0, label = "Test switched off", size = 6) +
+        theme_void()
       return()
     }
+    
     res <- d2_results() 
     if (is.null(res)) {
-      plot.new(); text(0.5,0.5,"Invalid input parameters", cex = 1.3)
+      ggplot() +
+        annotate("text", x = 0, y = 0, label = "Invalid input parameters", size = 6) +
+        theme_void()
       return()
     }
+    
     z_obs <- res$z_stat           
     x <- seq(-4, 4, length = 400)
     y <- dnorm(x) # N(0,1) pdf
-  
-    plot(x, y, type = "l", lwd = 2, col = "lightgrey",
-         xlab = "z‑value", ylab = "Density",
-         main = "Sampling Distribution Under Null Hypothesis")
+    df_plot <- data.frame(x = x, y = y)
+    shade <- "#2774AE"
     
-    shade <- "#FFD100"
-    # shading
+    p <- ggplot(df_plot, aes(x = x, y = y)) +
+      geom_line(color = "#2774AE", size = 1.2) +
+      labs(
+        x = "z-value", y = "Density",
+        title = expression(bold("Sampling Distribution Under Null Hypothesis"))
+      ) +
+      theme_minimal()
+    
     if (input$d2_alternative == "less") {
-      idx <- x <= z_obs
-      polygon(c(x[idx], rev(x[idx])), c(y[idx], rep(0, sum(idx))),
-              col = shade, border = NA)
+      p <- p + 
+        geom_area(data = subset(df_plot, x <= z_obs),
+                  aes(x = x, y = y), fill = shade, alpha = 0.5)
     } else if (input$d2_alternative == "greater") {
-      idx <- x >= z_obs
-      polygon(c(x[idx], rev(x[idx])), c(y[idx], rep(0, sum(idx))),
-              col = shade, border = NA)
-    } else {                        
+      p <- p + 
+        geom_area(data = subset(df_plot, x >= z_obs),
+                  aes(x = x, y = y), fill = shade, alpha = 0.5)
+    } else {
       crit <- abs(z_obs)
-      idxL <- x <= -crit
-      idxR <- x >= crit
-      polygon(c(x[idxL], rev(x[idxL])), c(y[idxL], rep(0, sum(idxL))),
-              col = shade, border = NA)
-      polygon(c(x[idxR], rev(x[idxR])), c(y[idxR], rep(0, sum(idxR))),
-              col = shade, border = NA)
+      p <- p +
+        geom_area(data = subset(df_plot, x <= -crit),
+                  aes(x = x, y = y), fill = shade, alpha = 0.5) +
+        geom_area(data = subset(df_plot, x >= crit),
+                  aes(x = x, y = y), fill = shade, alpha = 0.5)
     }
+    
+    p
   })
   
-
+  
   
   # ======================================================================
   # TAB 4: Difference Two Means
@@ -613,52 +640,65 @@ server <- function(input, output, session) {
   # Plot for Difference Two Means
   output$d2m_plot <- renderPlot({
     if (!input$d2m_show_test && !input$d2m_show_ci) {
-      plot.new(); text(0.5, 0.5, "No test or CI selected", cex = 1.4)
+      ggplot() +
+        annotate("text", x = 0, y = 0, label = "No test or CI selected", size = 6) +
+        theme_void()
       return()
     }
     
     res <- tryCatch(d2m_results(), error = function(e) NULL)
     if (is.null(res) || is.na(res$df) || res$df <= 0) {
-      plot.new(); text(0.5, 0.5, "Invalid input parameters for plot", cex = 1.5)
+      ggplot() +
+        annotate("text", x = 0, y = 0, label = "Invalid input parameters for plot", size = 6) +
+        theme_void()
       return()
     }
     
     t_obs <- res$t_stat
     df_val <- res$df
-    
-    # Determine plot range dynamically or use fixed range like -4 to 4 for t-values
-    plot_range <- max(4, abs(t_obs) + 1) 
+    plot_range <- max(4, abs(t_obs) + 1)
     x_vals <- seq(-plot_range, plot_range, length.out = 400)
     y_vals <- dt(x_vals, df = df_val)
+    df_plot <- data.frame(x = x_vals, y = y_vals)
     
-    plot_title <- "Sampling Distribution Under Null Hypothesis"
-    plot(x_vals, y_vals, type = "l", lwd = 2, col = "lightgrey",
-         xlab = "t-value", ylab = "Density", main = plot_title)
+    shade_col <- "#2774AE"
     
-    shade_col <- "#FFD100" # UCLA Gold
+    p <- ggplot(df_plot, aes(x = x, y = y)) +
+      geom_line(color = "#2774AE", size = 1.2) +
+      labs(
+        title = expression(bold("Sampling Distribution Under Null Hypothesis")),
+        x = "t-value",
+        y = "Density"
+      ) +
+      theme_minimal()
     
     if (input$d2m_show_test) {
       if (input$d2m_alternative == "less") {
-        idx <- x_vals <= t_obs
-        polygon(c(x_vals[idx], rev(x_vals[idx])), c(y_vals[idx], rep(0, sum(idx))), col = shade_col, border = NA)
+        p <- p + 
+          geom_area(data = subset(df_plot, x <= t_obs),
+                    aes(x = x, y = y), fill = shade_col, alpha = 0.5)
       } else if (input$d2m_alternative == "greater") {
-        idx <- x_vals >= t_obs
-        polygon(c(x_vals[idx], rev(x_vals[idx])), c(y_vals[idx], rep(0, sum(idx))), col = shade_col, border = NA)
-      } else { # two.sided
+        p <- p + 
+          geom_area(data = subset(df_plot, x >= t_obs),
+                    aes(x = x, y = y), fill = shade_col, alpha = 0.5)
+      } else {
         crit_val <- abs(t_obs)
-        idxL <- x_vals <= -crit_val
-        polygon(c(x_vals[idxL], rev(x_vals[idxL])), c(y_vals[idxL], rep(0, sum(idxL))), col = shade_col, border = NA)
-        idxR <- x_vals >= crit_val
-        polygon(c(x_vals[idxR], rev(x_vals[idxR])), c(y_vals[idxR], rep(0, sum(idxR))), col = shade_col, border = NA)
+        p <- p +
+          geom_area(data = subset(df_plot, x <= -crit_val),
+                    aes(x = x, y = y), fill = shade_col, alpha = 0.5) +
+          geom_area(data = subset(df_plot, x >= crit_val),
+                    aes(x = x, y = y), fill = shade_col, alpha = 0.5)
       }
     }
+    
+    p
   })
   
   
   # ======================================================================
   # TAB 5: Normal Distribution
   # ======================================================================
-
+  
   debounced_num1 <- debounce(reactive(input$num1), 300)
   debounced_num2 <- debounce(reactive(input$num2), 300)
   
@@ -828,12 +868,14 @@ server <- function(input, output, session) {
       prob <- pnorm(num1, mean, sd)
       shade_df <- df[df$x <= num1, ]
     } else if (range_type == "between") {
+      if (is.na(num1) || is.na(num2)) return(NULL)
       if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold."
       else {
         prob <- pnorm(num2, mean, sd) - pnorm(num1, mean, sd)
         shade_df <- df[df$x >= num1 & df$x <= num2, ]
       }
     } else if (range_type == "outside") {
+      if (is.na(num1) || is.na(num2)) return(NULL)
       if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold."
       else {
         prob <- 1 - (pnorm(num2, mean, sd) - pnorm(num1, mean, sd))
@@ -847,12 +889,14 @@ server <- function(input, output, session) {
   
   output$norm_prob <- renderText({
     res <- norm_result()
+    if (is.null(res)) return("")
     if (!is.null(res$error)) return(res$error)
     paste0("Probability = ", round(res$prob, 4))
   })
   
   output$threshold_text <- renderText({
     res <- norm_result()
+    if (is.null(res)) return("")
     if (!is.null(res$error)) return("")
     if (input$range == "above") {
       paste0("Threshold: Above ", round(res$num1, 4))
@@ -867,29 +911,30 @@ server <- function(input, output, session) {
   
   output$norm_plot <- renderPlot({
     res <- norm_result()
+    if (is.null(res)) return("")
     if (!is.null(res$error)) return(NULL)
     
     base_plot <- ggplot(res$data, aes(x, y)) +
-      geom_line(color = "blue") +
-      labs(title = "Normal Distribution", x = "X", y = "Density") +
+      geom_line(color = "#2774AE", size = 1.2) +
+      labs(title = expression(bold("Normal Distribution")), x = "X", y = "Density") +
       theme_minimal()
     
     if (input$range == "outside") {
       left <- subset(res$data, x <= res$num1)
       right <- subset(res$data, x >= res$num2)
       base_plot +
-        geom_area(data = left, aes(x, y), fill = "lightblue", alpha = 0.5) +
-        geom_area(data = right, aes(x, y), fill = "lightblue", alpha = 0.5)
+        geom_area(data = left, aes(x, y), fill = "#2774AE", alpha = 0.5) +
+        geom_area(data = right, aes(x, y), fill = "#2774AE", alpha = 0.5)
     } else {
       base_plot +
-        geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
+        geom_area(data = res$shaded, aes(x, y), fill = "#2774AE", alpha = 0.5)
     }
   })
   
   # ======================================================================
   # TAB 6: t-Distribution
   # ======================================================================
-
+  
   t_debounced_num1 <- debounce(reactive(input$t_num1), 300)
   t_debounced_num2 <- debounce(reactive(input$t_num2), 300)
   
@@ -1055,12 +1100,14 @@ server <- function(input, output, session) {
       prob <- pt(num1, df)
       shade_df <- df_data[df_data$x <= num1, ]
     } else if (range_type == "between") {
+      if (is.na(num1) || is.na(num2)) return(NULL)
       if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold."
       else {
         prob <- pt(num2, df) - pt(num1, df)
         shade_df <- df_data[df_data$x >= num1 & df_data$x <= num2, ]
       }
     } else if (range_type == "outside") {
+      if (is.na(num1) || is.na(num2)) return(NULL)
       if (num2 < num1) error_msg <- "Lower threshold must be less than upper threshold."
       else {
         prob <- 1 - (pt(num2, df) - pt(num1, df))
@@ -1074,12 +1121,14 @@ server <- function(input, output, session) {
   
   output$t_prob <- renderText({
     res <- t_result()
+    if (is.null(res)) return("")
     if (!is.null(res$error)) return(res$error)
     paste0("Probability = ", round(res$prob, 4))
   })
   
   output$t_threshold_text <- renderText({
     res <- t_result()
+    if (is.null(res)) return("")
     if (!is.null(res$error)) return("")
     if (input$t_range == "above") {
       paste0("Threshold: Above ", round(res$num1, 4))
@@ -1094,11 +1143,12 @@ server <- function(input, output, session) {
   
   output$t_plot <- renderPlot({
     res <- t_result()
+    if (is.null(res)) return("")
     if (!is.null(res$error)) return(NULL)
     
     base_plot <- ggplot(res$data, aes(x, y)) +
-      geom_line(color = "blue") +
-      labs(title = "t-Distribution", x = "X", y = "Density") +
+      geom_line(color = "#2774AE", size = 1.2) +
+      labs(title = expression(bold("t-Distribution")), x = "X", y = "Density") +
       theme_minimal()
     
     if (input$show_normal_overlay) {
@@ -1106,26 +1156,26 @@ server <- function(input, output, session) {
         x = res$data$x,
         y = dnorm(res$data$x)
       )
-    base_plot <- base_plot +
-      geom_line(data = normal_df, aes(x, y), color = "purple", linetype = "dashed")
+      base_plot <- base_plot +
+        geom_line(data = normal_df, aes(x, y), color = "darkgrey", linetype = "dashed")
     }
     
     if (input$t_range == "outside") {
       left <- subset(res$data, x <= res$num1)
       right <- subset(res$data, x >= res$num2)
       base_plot +
-        geom_area(data = left, aes(x, y), fill = "lightblue", alpha = 0.5) +
-        geom_area(data = right, aes(x, y), fill = "lightblue", alpha = 0.5)
+        geom_area(data = left, aes(x, y), fill = "#2774AE", alpha = 0.5) +
+        geom_area(data = right, aes(x, y), fill = "#2774AE", alpha = 0.5)
     } else {
       base_plot +
-        geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
+        geom_area(data = res$shaded, aes(x, y), fill = "#2774AE", alpha = 0.5)
     }
   })
-
+  
   # ======================================================================
   # TAB 7: Chi-square
   # ======================================================================
-
+  
   chisq_debounced_num1 <- debounce(reactive(input$chisq_num1), 300)
   
   chisq_threshold <- reactiveValues(num1 = 2)
@@ -1208,10 +1258,10 @@ server <- function(input, output, session) {
     if (is.null(res)) return(NULL)
     
     ggplot(res$data, aes(x, y)) +
-      geom_line(color = "blue") +
-      labs(title = "Chi-square Distribution", x = "X", y = "Density") +
+      geom_line(color = "#2774AE", size = 1.2) +
+      labs(title = expression(bold("Chi-square Distribution")), x = "X", y = "Density") +
       theme_minimal() +
-      geom_area(data = res$shaded, aes(x, y), fill = "lightblue", alpha = 0.5)
+      geom_area(data = res$shaded, aes(x, y), fill = "#2774AE", alpha = 0.5)
   })
   
   # ======================================================================
