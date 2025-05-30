@@ -1,4 +1,4 @@
-# S25-STATS-199-Shiny-App
+# UCLA Stats Calculator
 
 UCLA Stats Calculator is an R Shiny web app designed as a teaching companion for introductory statistics. After trying several online calculators and finding them clunky or incomplete, we built our own tool that puts learning first. Each tab of the calculator (One Proportion, One Mean, Difference Two Proportions, etc.) walks the user through required inputs, validates them immediately, then computes the test statistic and/or confidence interval, displays the results in an easy‑to‑read table, and visualizes the null distribution with color-coded rejection regions so users can see exactly where their statistic lands. Additional distribution tabs let you explore the normal, t, and χ² distributions in both forward and inverse modes, making critical‑value calculations simple and intuitive.
 
