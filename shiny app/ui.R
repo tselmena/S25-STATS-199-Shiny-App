@@ -1,20 +1,24 @@
 # ui.R =========================================================================
 
 ui <- fluidPage(
+
+  tags$head(
+    tags$link(rel = "icon",
+              href = "https://statistics.ucla.edu/wp-content/uploads/2023/08/cropped-cropped-ucla-logo-square-32x32.jpeg"
+    )
+  ),
   
   useShinyalert(),
   
   # theme
   theme = shinytheme("flatly"),
   
-  mathjax = TRUE,
-  # title
+  mathjax = TRUE, 
+  
+  # titlePanel 
   titlePanel(
-    windowTitle = "UCLA Stats Calculator",
-    title = tags$head(tags$link(rel = "icon",
-                                href="https://statistics.ucla.edu/wp-content/uploads/2023/08/cropped-cropped-ucla-logo-square-32x32.jpeg"
-                                )
-                      )
+    windowTitle = "UCLA Stats Calculator",    # Sets the browser window/tab title
+    title = "UCLA Stats Calculator"           # Sets the visible title on the page
   ),
   
   tabsetPanel(

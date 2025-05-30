@@ -1157,7 +1157,7 @@ server <- function(input, output, session) {
         y = dnorm(res$data$x)
       )
       base_plot <- base_plot +
-        geom_line(data = normal_df, aes(x, y), color = "darkgrey", linetype = "dashed")
+        geom_line(data = normal_df, aes(x, y), color = "darkgrey", linetype = "dashed", size = 1.2)
     }
     
     if (input$t_range == "outside") {
