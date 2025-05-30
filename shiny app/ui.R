@@ -8,8 +8,6 @@ ui <- fluidPage(
     )
   ),
   
-  useShinyalert(),
-  
   # theme
   theme = shinytheme("flatly"),
   
