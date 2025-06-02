@@ -522,7 +522,7 @@ server <- function(input, output, session) {
   # ======================================================================
   # TAB 4: Difference Two Means
   # ======================================================================
-  
+
   d2m_results <- reactive({
     n1    <- input$d2m_n1
     xbar1 <- input$d2m_xbar1
@@ -532,6 +532,8 @@ server <- function(input, output, session) {
     s2    <- input$d2m_s2
     delta0 <- 0
     conf_level <- as.numeric(input$d2m_conf_level)
+    var_equal_assumed <- input$d2m_var_equal 
+    
     
     validate(
       need(n1 >= 2, "Sample size n₁ must be ≥ 2."),
@@ -539,33 +541,65 @@ server <- function(input, output, session) {
       need(s1 > 0, "Sample SD s₁ must be > 0."),
       need(s2 > 0, "Sample SD s₂ must be > 0.")
     )
-    
-    # Welch's t-test calculations
+  
     diff_xbar <- xbar1 - xbar2
-    se <- sqrt(s1^2/n1 + s2^2/n2)
-    t_stat <- (diff_xbar - delta0) / se
+    df <- NA
+    se <- NA
+    t_stat <- NA
+    p_val <- NA
+    ci <- c(NA, NA)
     
-    # Welch-Satterthwaite degrees of freedom
-    df_num <- (s1^2/n1 + s2^2/n2)^2
-    df_den <- ( (s1^2/n1)^2 / (n1-1) ) + ( (s2^2/n2)^2 / (n2-1) )
-    df <- df_num / df_den
+    if (var_equal_assumed) {
+      # Pooled t-test (assuming equal variances)
+      df <- n1 + n2 - 2
+      # Calculate pooled variance and then pooled standard deviation
+      s_p_squared <- ((n1 - 1) * s1^2 + (n2 - 1) * s2^2) / df
+      s_p <- sqrt(s_p_squared)
+      # Standard error for pooled t-test
+      se <- s_p * sqrt(1/n1 + 1/n2)
+      
+    } else {
+      # Welch's t-test (not assuming equal variances)
+      se <- sqrt(s1^2/n1 + s2^2/n2)
+      # Welch-Satterthwaite degrees of freedom
+      df_num <- (s1^2/n1 + s2^2/n2)^2
+      df_den <- ( (s1^2/n1)^2 / (n1-1) ) + ( (s2^2/n2)^2 / (n2-1) )
+      if (df_den == 0) { 
+        df <- Inf 
+      } else {
+        df <- df_num / df_den
+      }
+    }
+    # t-statistic (common formula structure, SE and df differ)
+    if (is.na(se) || se == 0) { # check for NA or zero SE before division
+      t_stat <- NA
+    } else {
+      t_stat <- (diff_xbar - delta0) / se
+    }
     
-    p_val <- switch(input$d2m_alternative,
-                    "less" = pt(t_stat, df),
-                    "greater" = pt(t_stat, df, lower.tail = FALSE),
-                    "two.sided" = 2 * pt(abs(t_stat), df, lower.tail = FALSE)
-    )
-    
-    t_crit <- qt(1 - (1 - conf_level)/2, df)
-    moe <- t_crit * se
-    ci <- diff_xbar + c(-moe, moe)
+    # p-value and confidence interval depend on t_stat, df, and se
+    if (!is.na(t_stat) && !is.na(df) && df > 0) { # df must be positive
+      p_val <- switch(input$d2m_alternative,
+                      "less" = pt(t_stat, df),
+                      "greater" = pt(t_stat, df, lower.tail = FALSE),
+                      "two.sided" = 2 * pt(abs(t_stat), df, lower.tail = FALSE)
+      )
+      
+      t_crit <- qt(1 - (1 - conf_level)/2, df)
+      moe <- t_crit * se
+      ci <- diff_xbar + c(-moe, moe)
+    } else {
+      p_val <- NA
+      ci <- c(NA, NA)
+    }
     
     list(
       n1 = n1, xbar1 = xbar1, s1 = s1,
       n2 = n2, xbar2 = xbar2, s2 = s2,
       delta0 = delta0, diff_xbar = diff_xbar,
       t_stat = t_stat, df = df, p_value = p_val,
-      ci = ci, conf_level = conf_level
+      ci = ci, conf_level = conf_level,
+      var_equal_assumed = var_equal_assumed 
     )
   })
   

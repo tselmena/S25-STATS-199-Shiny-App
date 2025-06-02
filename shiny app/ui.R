@@ -1,11 +1,39 @@
 # ui.R =========================================================================
 
+# At the top of ui.R or in global.R
+twomeans_str <- HTML(paste0(
+  "<p class='intro-text-styling'>", 
+  "This computes a t-test for the difference between two means for ",
+  "independent (i.e., unpaired) samples. To compute a t-test for ",
+  "two paired samples, use the One Mean tab and plug in ",
+  "\u03BC", "<sub>diff</sub>",
+  " for ",
+  "\u03BC", "<sub>0</sub>",
+  ", ",
+  "x\u0304", "<sub>diff</sub>",
+  " for ",
+  "x\u0304",
+  ", and ",
+  "s", "<sub>diff</sub>",
+  " for ",
+  "s.",
+  "</p>"
+))
+
 ui <- fluidPage(
 
   tags$head(
     tags$link(rel = "icon",
               href = "https://statistics.ucla.edu/wp-content/uploads/2023/08/cropped-cropped-ucla-logo-square-32x32.jpeg"
-    )
+    ),
+    tags$style(HTML("
+      .intro-text-styling {
+        font-size: 0.9em;  /* Slightly smaller than normal text */
+        color: #808080;    /* A nice shade of grey */
+        margin-bottom: 15px; /* Space below the text, before the plot */
+        font-style: italic; 
+      }
+    "))
   ),
   
   useShinyalert(),
@@ -20,6 +48,7 @@ ui <- fluidPage(
     windowTitle = "UCLA Stats Calculator",    # Sets the browser window/tab title
     title = "UCLA Stats Calculator"           # Sets the visible title on the page
   ),
+  
   
   tabsetPanel(
     # ======================================================================
@@ -79,6 +108,7 @@ ui <- fluidPage(
                ),
                
                mainPanel(
+                 
                  plotOutput("plot"), # Plot remains at the top
                  
                  # TEST ON - Stacked tables
@@ -274,9 +304,12 @@ ui <- fluidPage(
       "Difference Two Means",
       sidebarLayout(
         sidebarPanel(
+          twomeans_str,
           # Checkboxes for CI and Test
           checkboxInput("d2m_show_ci", "Confidence Interval", TRUE),
           checkboxInput("d2m_show_test", "Test", TRUE),
+          checkboxInput("d2m_var_equal", "Assume equal variances", value = FALSE), # Default is unchecked
+          
           
           # Confidence Level
           conditionalPanel(
@@ -306,9 +339,12 @@ ui <- fluidPage(
           tags$strong("Group 2"),
           numericInput("d2m_n2", HTML("Sample size (n<sub>2</sub>)"), value = 30, min = 2, step = 1),
           numericInput("d2m_xbar2", HTML("Sample mean (x&#772;<sub>2</sub>)"), value = 116.4),
-          numericInput("d2m_s2", HTML("Sample SD (s<sub>2</sub>)"), value = 16.09, min = 0)
+          numericInput("d2m_s2", HTML("Sample SD (s<sub>2</sub>)"), value = 16.09, min = 0), 
+          twomeans_str
         ), 
         mainPanel(
+          
+          twomeans_str,
           plotOutput("d2m_plot"), 
           
           conditionalPanel(
