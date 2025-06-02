@@ -1,6 +1,5 @@
 # ui.R =========================================================================
 
-# At the top of ui.R or in global.R
 twomeans_str <- HTML(paste0(
   "<p class='intro-text-styling'>", 
   "This computes a t-test for the difference between two means for ",
@@ -107,7 +106,9 @@ ui <- fluidPage(
                
                mainPanel(
                  
-                 plotOutput("plot"), # Plot remains at the top
+                 div(style = "margin-top: 20px;", 
+                     plotOutput("plot")
+                 ),
                  
                  # TEST ON - Stacked tables
                  conditionalPanel(
@@ -172,7 +173,9 @@ ui <- fluidPage(
         ),
         
         mainPanel(
-          plotOutput("mean_plot"), # Plot remains at the top
+          div(style = "margin-top: 20px;", 
+              plotOutput("mean_plot")
+          ),
           
           # TEST ON - Stacked tables
           conditionalPanel(
@@ -264,7 +267,9 @@ ui <- fluidPage(
         
         # main: plot and tables
         mainPanel(
-          plotOutput("d2_zplot"), # Plot remains at the top
+          div(style = "margin-top: 20px;", 
+              plotOutput("d2_zplot")
+          ),
           
           # TEST ON - Stacked tables
           conditionalPanel(
@@ -343,7 +348,9 @@ ui <- fluidPage(
         mainPanel(
           
           twomeans_str,
-          plotOutput("d2m_plot"), 
+          div(style = "margin-top: 20px;", 
+              plotOutput("d2m_plot")
+          ),
           
           conditionalPanel(
             condition = "input.d2m_show_test == true",
@@ -415,7 +422,9 @@ ui <- fluidPage(
         ),
         
         mainPanel(
-          plotOutput("norm_plot"),
+          div(style = "margin-top: 20px;", 
+              plotOutput("norm_plot")
+          ),
           textOutput("norm_prob"),
           textOutput("threshold_text")
         )
@@ -466,7 +475,9 @@ ui <- fluidPage(
         ),
         
         mainPanel(
-          plotOutput("t_plot"),
+          div(style = "margin-top: 20px;", 
+              plotOutput("t_plot")
+          ),
           textOutput("t_prob"),
           textOutput("t_threshold_text")
         )
@@ -505,7 +516,9 @@ ui <- fluidPage(
           )
         ),
         mainPanel(
-          plotOutput("chisq_plot"),
+          div(style = "margin-top: 20px;", 
+              plotOutput("chisq_plot")
+          ),
           textOutput("chisq_prob"),
           textOutput("chisq_threshold_text")
           
