@@ -652,8 +652,21 @@ server <- function(input, output, session) {
     
     df <- data.frame(x = x_vals, prob = probs, color = bar_col)
     
-    ggplot(df, aes(x = factor(x), y = prob, fill = color)) +
+    # Compute mean and SD under null
+    mu <- input$n * input$p
+    sd <- sqrt(input$n * input$p * (1 - input$p))
+    
+    # Cutoffs at ±4 SD
+    lower <- max(0, floor(mu - 4 * sd))
+    upper <- min(input$n, ceiling(mu + 4 * sd))
+    
+    ggplot(df, aes(x = x, y = prob, fill = color)) +
       geom_col(color = "#2774AE") +
+      scale_x_continuous(
+        limits = c(lower, upper),
+        breaks = scales::pretty_breaks(n = 10),
+        expand = c(0, 0)
+      ) +
       scale_fill_identity() +
       labs(
         title = expression(bold("Sampling Distribution Under Null Hypothesis")),
