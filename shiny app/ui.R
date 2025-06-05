@@ -48,9 +48,158 @@ ui <- fluidPage(
   
   
   tabsetPanel(
+    
     # ======================================================================
-    # TAB 1: One Proportion 
+    # TAB 1: Normal Distribution
     # ======================================================================
+    
+    tabPanel(
+      "Normal Distribution",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("mode", "Select Mode:", 
+                      choices = c("Distribution Calculator" = "normal", 
+                                  "Inverse Calculator" = "inverse")),
+          
+          numericInput("mean", "Mean", value = 0, step = 0.01),
+          numericInput("sd", "Standard Deviation", value = 1, step = 0.01),
+          
+          radioButtons(
+            inputId = "range",
+            label = "Select Range:",
+            choices = c("Above" = "above", "Below" = "below", 
+                        "Between" = "between", "Outside" = "outside"),
+            selected = "between"  # default now set to "between"
+          ),
+          
+          conditionalPanel(
+            condition = "input.mode == 'inverse' && (input.range == 'between' || input.range == 'outside')",
+            checkboxInput("symmetric", "Symmetric Thresholds", value = TRUE)
+          ),
+          
+          uiOutput("dynamic_inputs"),
+          
+          conditionalPanel(
+            condition = "input.mode == 'inverse' && (input.range == 'between' || input.range == 'outside')",
+            numericInput("prob_input", "Desired Probability", value = 0.95, step = 0.01)
+          ),
+          
+          conditionalPanel(
+            condition = "input.mode == 'inverse' && input.range != 'between' && input.range != 'outside'",
+            numericInput("prob_input", "Probability", value = 0.95, step = 0.01)
+          ),
+          
+        ),
+        
+        mainPanel(
+          div(style = "margin-top: 20px;", 
+              plotOutput("norm_plot")
+          ),
+          textOutput("norm_prob"),
+          textOutput("threshold_text")
+        )
+      )
+    ),
+    
+    # ======================================================================
+    # TAB 2: t-Distribution
+    # ======================================================================
+    
+    tabPanel(
+      "t-Distribution",
+      sidebarLayout(
+        sidebarPanel(
+          checkboxInput("show_normal_overlay", "Standard Normal Overlay", value = FALSE),
+          
+          selectInput("t_mode", "Select Mode:", 
+                      choices = c("Distribution Calculator" = "t", 
+                                  "Inverse Calculator" = "inverse")),
+          
+          numericInput("df", "Degrees of Freedom (n - 1)", value = 29, step = 1, min = 1),
+          
+          radioButtons(
+            inputId = "t_range",
+            label = "Select Range:",
+            choices = c("Above" = "above", "Below" = "below", 
+                        "Between" = "between", "Outside" = "outside"),
+            selected = "between"
+          ),
+          
+          conditionalPanel(
+            condition = "input.t_mode == 'inverse' && (input.t_range == 'between' || input.t_range == 'outside')",
+            checkboxInput("t_symmetric", "Symmetric Thresholds", value = TRUE)
+          ),
+          
+          uiOutput("t_dynamic_inputs"),
+          
+          conditionalPanel(
+            condition = "input.t_mode == 'inverse' && (input.t_range == 'between' || input.t_range == 'outside')",
+            numericInput("t_prob_input", "Desired Probability", value = 0.95, step = 0.01)
+          ),
+          
+          conditionalPanel(
+            condition = "input.t_mode == 'inverse' && input.t_range != 'between' && input.t_range != 'outside'",
+            numericInput("t_prob_input", "Probability", value = 0.95, step = 0.01)
+          ),
+          
+        ),
+        
+        mainPanel(
+          div(style = "margin-top: 20px;", 
+              plotOutput("t_plot")
+          ),
+          textOutput("t_prob"),
+          textOutput("t_threshold_text")
+        )
+      )
+    ),
+    
+    # ======================================================================
+    # TAB 3: Chi-square Distribution
+    # ======================================================================
+    
+    tabPanel(
+      "Chi-square Distribution",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("chisq_mode", "Select Mode:", 
+                      choices = c("Distribution Calculator" = "chisq", 
+                                  "Inverse Calculator" = "inverse")),
+          
+          numericInput("chisq_df", "Degrees of Freedom", value = 1, min = 1, step = 1),
+          
+          # Show range selection in both modes
+          radioButtons("chisq_range", "Select Range:",
+                       choices = c("Above" = "above", "Below" = "below"),
+                       selected = "below"),
+          
+          # Only show threshold input in distribution mode
+          conditionalPanel(
+            condition = "input.chisq_mode == 'chisq'",
+            uiOutput("chisq_dynamic_inputs")
+          ),
+          
+          # Only show desired probability input in inverse mode
+          conditionalPanel(
+            condition = "input.chisq_mode == 'inverse'",
+            numericInput("chisq_prob_input", "Desired Probability", value = 0.95, step = 0.01)
+          )
+        ),
+        mainPanel(
+          div(style = "margin-top: 20px;", 
+              plotOutput("chisq_plot")
+          ),
+          textOutput("chisq_prob"),
+          textOutput("chisq_threshold_text")
+          
+        )
+      )
+    ),
+    
+    # ======================================================================
+    # TAB 4: One Proportion 
+    # ======================================================================
+    
     tabPanel("One Proportion",
              sidebarLayout(
                sidebarPanel(
@@ -138,7 +287,7 @@ ui <- fluidPage(
     ),
     
     # ======================================================================
-    # TAB 2: One Mean
+    # TAB 5: One Mean
     # ======================================================================
     
     tabPanel(
@@ -206,8 +355,9 @@ ui <- fluidPage(
     
     
     # ====================================================================
-    # TAB 3: Difference Two Proportions 
+    # TAB 6: Difference Two Proportions 
     # ====================================================================
+    
     tabPanel(
       "Difference Two Proportions", # Title as provided in the snippet
       sidebarLayout(
@@ -300,7 +450,7 @@ ui <- fluidPage(
     
     
     # ======================================================================
-    # TAB 4: Difference Two Means
+    # TAB 7: Difference Two Means
     # ======================================================================
     
     tabPanel(
@@ -373,153 +523,6 @@ ui <- fluidPage(
                 gt_output("d2m_ci_table_bottom")
             )
           )
-        )
-      )
-    ),
-    
-    # ======================================================================
-    # TAB 5: Normal Distribution
-    # ======================================================================
-    
-    tabPanel(
-      "Normal Distribution",
-      sidebarLayout(
-        sidebarPanel(
-          selectInput("mode", "Select Mode:", 
-                      choices = c("Distribution Calculator" = "normal", 
-                                  "Inverse Calculator" = "inverse")),
-          
-          numericInput("mean", "Mean", value = 0, step = 0.01),
-          numericInput("sd", "Standard Deviation", value = 1, step = 0.01),
-          
-          radioButtons(
-            inputId = "range",
-            label = "Select Range:",
-            choices = c("Above" = "above", "Below" = "below", 
-                        "Between" = "between", "Outside" = "outside"),
-            selected = "between"  # default now set to "between"
-          ),
-          
-          conditionalPanel(
-            condition = "input.mode == 'inverse' && (input.range == 'between' || input.range == 'outside')",
-            checkboxInput("symmetric", "Symmetric Thresholds", value = TRUE)
-          ),
-          
-          uiOutput("dynamic_inputs"),
-          
-          conditionalPanel(
-            condition = "input.mode == 'inverse' && (input.range == 'between' || input.range == 'outside')",
-            numericInput("prob_input", "Desired Probability", value = 0.95, step = 0.01)
-          ),
-          
-          conditionalPanel(
-            condition = "input.mode == 'inverse' && input.range != 'between' && input.range != 'outside'",
-            numericInput("prob_input", "Probability", value = 0.95, step = 0.01)
-          ),
-          
-        ),
-        
-        mainPanel(
-          div(style = "margin-top: 20px;", 
-              plotOutput("norm_plot")
-          ),
-          textOutput("norm_prob"),
-          textOutput("threshold_text")
-        )
-      )
-    ),
- 
-    # ======================================================================
-    # TAB 6: t-Distribution
-    # ======================================================================
-
-    tabPanel(
-      "t-Distribution",
-      sidebarLayout(
-        sidebarPanel(
-          checkboxInput("show_normal_overlay", "Standard Normal Overlay", value = FALSE),
-          
-          selectInput("t_mode", "Select Mode:", 
-                      choices = c("Distribution Calculator" = "t", 
-                                  "Inverse Calculator" = "inverse")),
-          
-          numericInput("df", "Degrees of Freedom (n - 1)", value = 29, step = 1, min = 1),
-          
-          radioButtons(
-            inputId = "t_range",
-            label = "Select Range:",
-            choices = c("Above" = "above", "Below" = "below", 
-                        "Between" = "between", "Outside" = "outside"),
-            selected = "between"
-          ),
-          
-          conditionalPanel(
-            condition = "input.t_mode == 'inverse' && (input.t_range == 'between' || input.t_range == 'outside')",
-            checkboxInput("t_symmetric", "Symmetric Thresholds", value = TRUE)
-          ),
-          
-          uiOutput("t_dynamic_inputs"),
-          
-          conditionalPanel(
-            condition = "input.t_mode == 'inverse' && (input.t_range == 'between' || input.t_range == 'outside')",
-            numericInput("t_prob_input", "Desired Probability", value = 0.95, step = 0.01)
-          ),
-          
-          conditionalPanel(
-            condition = "input.t_mode == 'inverse' && input.t_range != 'between' && input.t_range != 'outside'",
-            numericInput("t_prob_input", "Probability", value = 0.95, step = 0.01)
-          ),
-          
-        ),
-        
-        mainPanel(
-          div(style = "margin-top: 20px;", 
-              plotOutput("t_plot")
-          ),
-          textOutput("t_prob"),
-          textOutput("t_threshold_text")
-        )
-      )
-    ),
-
-    # ======================================================================
-    # TAB 7: Chi-square Distribution
-    # ======================================================================
-    
-    tabPanel(
-      "Chi-square Distribution",
-      sidebarLayout(
-        sidebarPanel(
-          selectInput("chisq_mode", "Select Mode:", 
-                      choices = c("Distribution Calculator" = "chisq", 
-                                  "Inverse Calculator" = "inverse")),
-          
-          numericInput("chisq_df", "Degrees of Freedom", value = 1, min = 1, step = 1),
-          
-          # Show range selection in both modes
-          radioButtons("chisq_range", "Select Range:",
-                       choices = c("Above" = "above", "Below" = "below"),
-                       selected = "below"),
-          
-          # Only show threshold input in distribution mode
-          conditionalPanel(
-            condition = "input.chisq_mode == 'chisq'",
-            uiOutput("chisq_dynamic_inputs")
-          ),
-          
-          # Only show desired probability input in inverse mode
-          conditionalPanel(
-            condition = "input.chisq_mode == 'inverse'",
-            numericInput("chisq_prob_input", "Desired Probability", value = 0.95, step = 0.01)
-          )
-        ),
-        mainPanel(
-          div(style = "margin-top: 20px;", 
-              plotOutput("chisq_plot")
-          ),
-          textOutput("chisq_prob"),
-          textOutput("chisq_threshold_text")
-          
         )
       )
     ),
