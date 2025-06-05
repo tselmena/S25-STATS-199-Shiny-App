@@ -307,7 +307,6 @@ ui <- fluidPage(
       "Difference Two Means",
       sidebarLayout(
         sidebarPanel(
-          twomeans_str,
           # Checkboxes for CI and Test
           checkboxInput("d2m_show_ci", "Confidence Interval", TRUE),
           checkboxInput("d2m_show_test", "Test", TRUE),
@@ -346,8 +345,7 @@ ui <- fluidPage(
           twomeans_str
         ), 
         mainPanel(
-          
-          twomeans_str,
+        
           div(style = "margin-top: 20px;", 
               plotOutput("d2m_plot")
           ),
