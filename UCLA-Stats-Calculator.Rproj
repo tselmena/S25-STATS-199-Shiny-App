@@ -1,0 +1,16 @@
+Version: 1.0
+ProjectId: 6c7666bb-4d48-4182-ba69-6f6b158412a2
+
+RestoreWorkspace: Default
+SaveWorkspace: Default
+AlwaysSaveHistory: Default
+
+EnableCodeIndexing: Yes
+UseSpacesForTab: Yes
+NumSpacesForTab: 2
+Encoding: UTF-8
+
+RnwWeave: Sweave
+LaTeX: pdfLaTeX
+
+ProjectName: UCLA-Stats-Calculator
