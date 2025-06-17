@@ -27,9 +27,9 @@ ui <- fluidPage(
     ),
     tags$style(HTML("
       .intro-text-styling {
-        font-size: 0.9em;  /* Slightly smaller than normal text */
-        color: #808080;    /* A nice shade of grey */
-        margin-bottom: 15px; /* Space below the text, before the plot */
+        font-size: 0.9em;  
+        color: #808080;    
+        margin-bottom: 15px; 
         font-style: italic; 
       }
     "))
@@ -42,8 +42,8 @@ ui <- fluidPage(
   
   # titlePanel 
   titlePanel(
-    windowTitle = "UCLA Stats Calculator",    # Sets the browser window/tab title
-    title = "UCLA Stats Calculator"           # Sets the visible title on the page
+    windowTitle = "UCLA Stats Calculator",   
+    title = "UCLA Stats Calculator"          
   ),
   
   
@@ -69,7 +69,7 @@ ui <- fluidPage(
             label = "Select Range:",
             choices = c("Above" = "above", "Below" = "below", 
                         "Between" = "between", "Outside" = "outside"),
-            selected = "between"  # default now set to "between"
+            selected = "between"  # default set to "between"
           ),
           
           conditionalPanel(
@@ -210,11 +210,13 @@ ui <- fluidPage(
                  # If CI is shown, let the user select the confidence level
                  conditionalPanel(
                    condition = "input.show_ci == true",
-                   selectInput(
+                   numericInput(
                      inputId = "conf_level",
                      label = "Confidence Level:",
-                     choices = c("90%" = 0.90, "95%" = 0.95, "99%" = 0.99),
-                     selected = 0.95
+                     value = 0.95,
+                     min = 0.01,
+                     max = 0.999,
+                     step = 0.01
                    )
                  ),
                  
@@ -299,9 +301,11 @@ ui <- fluidPage(
           # confidence level
           conditionalPanel(
             condition = "input.mean_show_ci == true",
-            selectInput("mean_conf_level", "Confidence Level:",
-                        choices  = c("90%" = 0.90, "95%" = 0.95, "99%" = 0.99),
-                        selected = 0.95)
+            numericInput("mean_conf_level", "Confidence Level:",
+                         value = 0.95,
+                         min = 0.01,
+                         max = 0.999,
+                         step = 0.01)
           ),
           
           # alternative
@@ -367,9 +371,11 @@ ui <- fluidPage(
           
           conditionalPanel(
             condition = "input.d2_show_ci == true",
-            selectInput("d2_conf_level", "Confidence Level:",
-                        choices  = c("90%" = 0.90, "95%" = 0.95, "99%" = 0.99),
-                        selected = 0.95)
+            numericInput("d2_conf_level", "Confidence Level:",
+                         value = 0.95,
+                         min = 0.01,
+                         max = 0.999,
+                         step = 0.01)
           ),
           
           conditionalPanel(
@@ -466,9 +472,11 @@ ui <- fluidPage(
           # Confidence Level
           conditionalPanel(
             condition = "input.d2m_show_ci == true",
-            selectInput("d2m_conf_level", "Confidence Level:",
-                        choices  = c("90%" = 0.90, "95%" = 0.95, "99%" = 0.99),
-                        selected = 0.95)
+            numericInput("d2m_conf_level", "Confidence Level:",
+                         value = 0.95,
+                         min = 0.01,
+                         max = 0.999,
+                         step = 0.01)
           ),
           
           # Type of Test
