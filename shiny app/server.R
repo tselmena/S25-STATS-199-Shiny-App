@@ -590,7 +590,7 @@ server <- function(input, output, session) {
       need(input$n > 0, "Sample size n must be > 0"),
       need(x >= 0 && x <= input$n, "x must be between 0 and n"),
       need(input$p > 0 && input$p < 1,
-           "Hypothesised proportion p0 must be in [0,1]"),
+           "Hypothesized proportion p0 must be in [0,1]"),
       need(ph >= 0 && ph <= 1,
            "Sample proportion p_hat must be in [0,1]")
     )
